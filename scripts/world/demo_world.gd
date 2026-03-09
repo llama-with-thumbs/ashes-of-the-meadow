@@ -5,52 +5,36 @@ extends Node2D
 @onready var player: CharacterBody2D = $Sheep
 @onready var camera: Camera2D = $Sheep/Camera2D
 @onready var narration_label: Label = $UI/NarrationLabel
-@onready var cassette_device: Area2D = $CassettePickup
 @onready var hud: CanvasLayer = $UI/HUD
 @onready var fade_rect: ColorRect = $UI/FadeRect
 @onready var ending_label: Label = $UI/EndingLabel
 
-@export var skip_intro: bool = false  ## Set to false for full intro sequence
-
-var narration_queue: Array[Dictionary] = []
-var showing_narration: bool = false
 var ending_triggered: bool = false
-var intro_skipped: bool = false
 var _active_narrations: Array[Label] = []
 
 func _ready() -> void:
 	# Start with black screen
 	fade_rect.color = Color(0, 0, 0, 1)
 	ending_label.visible = false
-	hud.visible = false
 	narration_label.visible = false
 
 	GameState.phase_changed.connect(_on_phase_changed)
 	GameState.build_completed.connect(_on_build_completed)
 
-	# Start the demo sequence
+	# Remove cassette pickup — sheep starts with full controls
+	var cassette_device := get_node_or_null("CassettePickup")
+	if cassette_device:
+		cassette_device.queue_free()
+
 	_start_opening()
 
-func _unhandled_input(event: InputEvent) -> void:
-	# Skip intro with Escape or Enter
-	if not intro_skipped and event is InputEventKey and event.pressed:
-		if event.keycode == KEY_ESCAPE or event.keycode == KEY_ENTER:
-			_skip_intro()
-
 func _start_opening() -> void:
-	if skip_intro:
-		# Dev mode: skip intro, give cassette, start gameplay immediately
-		fade_rect.color.a = 0.0
-		hud.visible = true
-		player.receive_cassette()
-		GameState.advance_phase(GameState.Phase.EXPLORATION)
-		_show_narration("Dev mode — explore freely. SPACE=pulse, A/D=aim, E=interact")
-		return
+	# Player is fully controllable from the start
+	hud.visible = true
+	player.enable_movement()
+	GameState.has_cassette_bass = true
 
-	# Show skip hint
-	_show_skip_hint()
-
-	# Fade in from black
+	# Fade in from black with atmospheric narration
 	var tween := create_tween()
 	tween.tween_property(fade_rect, "color:a", 0.0, 3.0)
 	tween.tween_callback(func():
@@ -60,36 +44,18 @@ func _start_opening() -> void:
 		await get_tree().create_timer(5.0).timeout
 		_show_narration("Everything is silent.")
 		await get_tree().create_timer(5.0).timeout
-		_show_narration("Something is glowing nearby...")
+		_show_narration("Sound pushes you forward... SPACE to pulse, A/D to aim.")
 		await get_tree().create_timer(5.0).timeout
-		# Let the sheep flail toward the cassette
-		player.enable_flailing()
-		GameState.advance_phase(GameState.Phase.DISCOVERY)
+		_show_narration("Hold SPACE for a stronger pulse. E to interact.")
+		await get_tree().create_timer(5.0).timeout
+		_show_narration("Explore the ruins... gather what remains.")
+		await get_tree().create_timer(5.0).timeout
+		GameState.tutorial_complete = true
+		GameState.advance_phase(GameState.Phase.EXPLORATION)
 	)
 
 func _on_phase_changed(new_phase: GameState.Phase) -> void:
 	match new_phase:
-		GameState.Phase.DISCOVERY:
-			_show_narration("Try to move... SPACE to kick, A/D to turn...")
-		GameState.Phase.TUTORIAL:
-			intro_skipped = true
-			if _skip_hint_label and is_instance_valid(_skip_hint_label):
-				var fade := create_tween()
-				fade.tween_property(_skip_hint_label, "modulate:a", 0.0, 1.0)
-				fade.tween_callback(_skip_hint_label.queue_free)
-			hud.visible = true
-			_show_narration("A cassette player... fused with a bass.")
-			await get_tree().create_timer(5.0).timeout
-			_show_narration("SPACE to play a note. Sound pushes you forward.")
-			await get_tree().create_timer(5.0).timeout
-			_show_narration("A/D to aim. Hold SPACE for a stronger pulse.")
-			await get_tree().create_timer(5.0).timeout
-			_show_narration("E to interact with objects nearby.")
-			await get_tree().create_timer(5.0).timeout
-			_show_narration("Explore the ruins... gather what remains.")
-			await get_tree().create_timer(5.0).timeout
-			GameState.tutorial_complete = true
-			GameState.advance_phase(GameState.Phase.EXPLORATION)
 		GameState.Phase.EXPLORATION:
 			_show_narration("Fragments of home... scattered everywhere.")
 		GameState.Phase.BUILDING:
@@ -129,39 +95,6 @@ func _trigger_ending() -> void:
 	tween.tween_property(ending_label, "modulate:a", 1.0, 3.0)
 	tween.tween_interval(8.0)
 	tween.tween_property(fade_rect, "color:a", 1.0, 3.0)
-
-var _skip_hint_label: Label = null
-
-func _show_skip_hint() -> void:
-	_skip_hint_label = Label.new()
-	_skip_hint_label.text = "Press ESC to skip"
-	_skip_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_skip_hint_label.anchor_left = 1.0
-	_skip_hint_label.anchor_right = 1.0
-	_skip_hint_label.anchor_top = 1.0
-	_skip_hint_label.anchor_bottom = 1.0
-	_skip_hint_label.offset_left = -200.0
-	_skip_hint_label.offset_top = -40.0
-	_skip_hint_label.offset_right = -20.0
-	_skip_hint_label.offset_bottom = -10.0
-	_skip_hint_label.modulate = Color(1, 1, 1, 0.4)
-	narration_label.get_parent().add_child(_skip_hint_label)
-
-func _skip_intro() -> void:
-	intro_skipped = true
-	# Clear all narration labels
-	for lbl in _active_narrations:
-		if is_instance_valid(lbl):
-			lbl.queue_free()
-	_active_narrations.clear()
-	# Remove skip hint
-	if _skip_hint_label and is_instance_valid(_skip_hint_label):
-		_skip_hint_label.queue_free()
-	# Snap to gameplay
-	fade_rect.color.a = 0.0
-	hud.visible = true
-	player.receive_cassette()
-	GameState.advance_phase(GameState.Phase.EXPLORATION)
 
 func _show_narration(text: String, duration: float = 5.5) -> void:
 	# Drift existing labels upward
