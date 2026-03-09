@@ -1,0 +1,20 @@
+# Godot
+.godot/
+.import/
+export_presets.cfg
+*.translation
+
+# Downloaded engine
+godot_engine/
+godot.zip
+
+# Logs
+godot_log.txt
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/

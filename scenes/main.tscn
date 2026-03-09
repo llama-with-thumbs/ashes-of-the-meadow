@@ -1,0 +1,367 @@
+[gd_scene load_steps=22 format=3 uid="uid://main_scene"]
+
+[ext_resource type="Script" path="res://scripts/world/demo_world.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/player/sheep.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/player/sound_ring.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/objects/cassette_pickup.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/objects/home_base.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/objects/collectible.gd" id="6"]
+[ext_resource type="Script" path="res://scripts/objects/debris.gd" id="7"]
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="8"]
+[ext_resource type="Script" path="res://scripts/world/sprite_loader.gd" id="9"]
+[ext_resource type="Shader" path="res://assets/shaders/starfield.gdshader" id="10"]
+
+[sub_resource type="ShaderMaterial" id="starfield_mat"]
+shader = ExtResource("10")
+shader_parameter/scroll_x = 0.0
+shader_parameter/scroll_y = 0.0
+shader_parameter/star_density = 0.4
+shader_parameter/bg_color = Color(0.02, 0.02, 0.06, 1)
+shader_parameter/star_color_warm = Color(1, 0.9, 0.7, 1)
+shader_parameter/star_color_cool = Color(0.7, 0.8, 1, 1)
+
+[sub_resource type="CircleShape2D" id="sheep_body"]
+radius = 16.0
+
+[sub_resource type="CircleShape2D" id="interact_radius"]
+radius = 80.0
+
+[sub_resource type="CircleShape2D" id="cassette_shape"]
+radius = 20.0
+
+[sub_resource type="RectangleShape2D" id="homebase_shape"]
+size = Vector2(60, 40)
+
+[sub_resource type="CircleShape2D" id="homebase_interact"]
+radius = 90.0
+
+[sub_resource type="CircleShape2D" id="collectible_shape"]
+radius = 12.0
+
+[sub_resource type="RectangleShape2D" id="debris_shape_1"]
+size = Vector2(40, 20)
+
+[sub_resource type="RectangleShape2D" id="debris_shape_2"]
+size = Vector2(50, 25)
+
+[sub_resource type="RectangleShape2D" id="debris_shape_3"]
+size = Vector2(35, 15)
+
+[sub_resource type="RectangleShape2D" id="debris_shape_4"]
+size = Vector2(45, 22)
+
+[node name="DemoWorld" type="Node2D"]
+script = ExtResource("1")
+
+[node name="SpriteLoader" type="Node" parent="."]
+script = ExtResource("9")
+
+[node name="StarfieldBG" type="ColorRect" parent="."]
+z_index = -10
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -2000.0
+offset_top = -2000.0
+offset_right = 2000.0
+offset_bottom = 2000.0
+material = SubResource("starfield_mat")
+
+[node name="Sheep" type="CharacterBody2D" parent="." groups=["player"]]
+position = Vector2(0, 0)
+script = ExtResource("2")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Sheep"]
+shape = SubResource("sheep_body")
+
+[node name="Sprite2D" type="Sprite2D" parent="Sheep"]
+modulate = Color(0.95, 0.92, 0.85, 1)
+scale = Vector2(0.7, 0.7)
+
+[node name="CassetteSprite" type="Sprite2D" parent="Sheep"]
+visible = false
+position = Vector2(0, 20)
+modulate = Color(0.85, 0.65, 0.4, 1)
+scale = Vector2(0.4, 0.4)
+
+[node name="SoundRing" type="Node2D" parent="Sheep"]
+script = ExtResource("3")
+
+[node name="NoteParticles" type="GPUParticles2D" parent="Sheep"]
+emitting = false
+amount = 8
+lifetime = 0.5
+
+[node name="InteractArea" type="Area2D" parent="Sheep"]
+
+[node name="InteractShape" type="CollisionShape2D" parent="Sheep/InteractArea"]
+shape = SubResource("interact_radius")
+
+[node name="ChargeBar" type="ProgressBar" parent="Sheep"]
+offset_left = -20.0
+offset_top = -30.0
+offset_right = 20.0
+offset_bottom = -24.0
+max_value = 3.0
+show_percentage = false
+
+[node name="BassPlayer" type="AudioStreamPlayer" parent="Sheep"]
+volume_db = -6.0
+
+[node name="HissPlayer" type="AudioStreamPlayer" parent="Sheep"]
+volume_db = -18.0
+
+[node name="Camera2D" type="Camera2D" parent="Sheep"]
+zoom = Vector2(1.5, 1.5)
+position_smoothing_enabled = true
+position_smoothing_speed = 3.0
+
+[node name="CassettePickup" type="Area2D" parent="."]
+position = Vector2(150, -20)
+script = ExtResource("4")
+collision_mask = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CassettePickup"]
+shape = SubResource("cassette_shape")
+
+[node name="Sprite2D" type="Sprite2D" parent="CassettePickup"]
+modulate = Color(1, 0.85, 0.5, 1)
+scale = Vector2(0.8, 0.8)
+
+[node name="HomeBase" type="StaticBody2D" parent="."]
+position = Vector2(-300, 50)
+script = ExtResource("5")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HomeBase"]
+shape = SubResource("homebase_shape")
+
+[node name="Sprite2D" type="Sprite2D" parent="HomeBase"]
+modulate = Color(0.9, 0.88, 0.92, 1)
+scale = Vector2(1.2, 1.2)
+
+[node name="HullVisual" type="Sprite2D" parent="HomeBase"]
+visible = false
+position = Vector2(0, -5)
+modulate = Color(0.95, 0.9, 0.85, 1)
+scale = Vector2(1.2, 1.2)
+
+[node name="AntennaVisual" type="Sprite2D" parent="HomeBase"]
+visible = false
+position = Vector2(0, -50)
+modulate = Color(0.95, 0.9, 0.85, 1)
+scale = Vector2(1.0, 1.0)
+
+[node name="BuildPrompt" type="Label" parent="HomeBase"]
+offset_left = -100.0
+offset_top = 35.0
+offset_right = 100.0
+offset_bottom = 55.0
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="InteractArea" type="Area2D" parent="HomeBase"]
+collision_layer = 0
+collision_mask = 1
+
+[node name="InteractAreaShape" type="CollisionShape2D" parent="HomeBase/InteractArea"]
+shape = SubResource("homebase_interact")
+
+[node name="Salvage1" type="Area2D" parent="."]
+position = Vector2(300, -80)
+script = ExtResource("6")
+item_type = "salvage"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Salvage1"]
+shape = SubResource("collectible_shape")
+
+[node name="Sprite2D" type="Sprite2D" parent="Salvage1"]
+scale = Vector2(1.0, 1.0)
+
+[node name="Salvage2" type="Area2D" parent="."]
+position = Vector2(450, 100)
+script = ExtResource("6")
+item_type = "salvage"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Salvage2"]
+shape = SubResource("collectible_shape")
+
+[node name="Sprite2D" type="Sprite2D" parent="Salvage2"]
+scale = Vector2(1.0, 1.0)
+
+[node name="Salvage3" type="Area2D" parent="."]
+position = Vector2(200, 180)
+script = ExtResource("6")
+item_type = "salvage"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Salvage3"]
+shape = SubResource("collectible_shape")
+
+[node name="Sprite2D" type="Sprite2D" parent="Salvage3"]
+scale = Vector2(1.0, 1.0)
+
+[node name="Tape1" type="Area2D" parent="."]
+position = Vector2(-100, -150)
+script = ExtResource("6")
+item_type = "tape_fragment"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Tape1"]
+shape = SubResource("collectible_shape")
+
+[node name="Sprite2D" type="Sprite2D" parent="Tape1"]
+scale = Vector2(1.0, 1.0)
+
+[node name="Tape2" type="Area2D" parent="."]
+position = Vector2(500, -30)
+script = ExtResource("6")
+item_type = "tape_fragment"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Tape2"]
+shape = SubResource("collectible_shape")
+
+[node name="Sprite2D" type="Sprite2D" parent="Tape2"]
+scale = Vector2(1.0, 1.0)
+
+[node name="Wool1" type="Area2D" parent="."]
+position = Vector2(-200, -100)
+script = ExtResource("6")
+item_type = "wool_fiber"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Wool1"]
+shape = SubResource("collectible_shape")
+
+[node name="Sprite2D" type="Sprite2D" parent="Wool1"]
+scale = Vector2(1.0, 1.0)
+
+[node name="Wool2" type="Area2D" parent="."]
+position = Vector2(350, 200)
+script = ExtResource("6")
+item_type = "wool_fiber"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Wool2"]
+shape = SubResource("collectible_shape")
+
+[node name="Sprite2D" type="Sprite2D" parent="Wool2"]
+scale = Vector2(1.0, 1.0)
+
+[node name="Stardust1" type="Area2D" parent="."]
+position = Vector2(-150, 200)
+script = ExtResource("6")
+item_type = "stardust"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Stardust1"]
+shape = SubResource("collectible_shape")
+
+[node name="Sprite2D" type="Sprite2D" parent="Stardust1"]
+scale = Vector2(1.0, 1.0)
+
+[node name="Debris1" type="StaticBody2D" parent="."]
+position = Vector2(250, 0)
+script = ExtResource("7")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Debris1"]
+shape = SubResource("debris_shape_1")
+
+[node name="Sprite2D" type="Sprite2D" parent="Debris1"]
+modulate = Color(0.85, 0.83, 0.9, 1)
+scale = Vector2(1.0, 1.0)
+
+[node name="Debris2" type="StaticBody2D" parent="."]
+position = Vector2(-50, 120)
+rotation = 0.5
+script = ExtResource("7")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Debris2"]
+shape = SubResource("debris_shape_2")
+
+[node name="Sprite2D" type="Sprite2D" parent="Debris2"]
+modulate = Color(0.82, 0.8, 0.88, 1)
+scale = Vector2(1.2, 1.2)
+
+[node name="Debris3" type="StaticBody2D" parent="."]
+position = Vector2(400, -120)
+rotation = -0.3
+script = ExtResource("7")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Debris3"]
+shape = SubResource("debris_shape_3")
+
+[node name="Sprite2D" type="Sprite2D" parent="Debris3"]
+modulate = Color(0.8, 0.78, 0.86, 1)
+scale = Vector2(0.9, 0.9)
+
+[node name="Debris4" type="StaticBody2D" parent="."]
+position = Vector2(-250, -50)
+rotation = 1.2
+script = ExtResource("7")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Debris4"]
+shape = SubResource("debris_shape_4")
+
+[node name="Sprite2D" type="Sprite2D" parent="Debris4"]
+modulate = Color(0.84, 0.82, 0.9, 1)
+scale = Vector2(1.1, 1.1)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="NarrationLabel" type="Label" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = 100.0
+offset_right = 300.0
+offset_bottom = 140.0
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="HUD" type="CanvasLayer" parent="UI"]
+visible = false
+script = ExtResource("8")
+
+[node name="InventoryPanel" type="PanelContainer" parent="UI/HUD"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 160.0
+offset_bottom = 100.0
+
+[node name="InventoryLabel" type="Label" parent="UI/HUD/InventoryPanel"]
+layout_mode = 2
+text = "Empty"
+
+[node name="HintLabel" type="Label" parent="UI/HUD"]
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -60.0
+offset_right = 200.0
+offset_bottom = -30.0
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="FadeRect" type="ColorRect" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 1)
+
+[node name="EndingLabel" type="Label" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -60.0
+offset_right = 250.0
+offset_bottom = 60.0
+horizontal_alignment = 1
+vertical_alignment = 1
