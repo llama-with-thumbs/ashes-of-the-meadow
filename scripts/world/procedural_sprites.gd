@@ -178,70 +178,163 @@ static func generate_sheep() -> ImageTexture:
 
 	return ImageTexture.create_from_image(img)
 
-# ─── Cassette-Bass Device (64x64) ───
+# ─── Walkman-style Cassette Player with Orange Headphones (96x80) ───
 
 static func generate_cassette() -> ImageTexture:
-	var s := 64
-	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	var w := 96
+	var h := 80
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
-	var cx := s / 2.0
-	var cy := s / 2.0
+	var cx := w / 2.0
+	var cy := (24 + 68) / 2.0  # vertical center of body
+	var body_top := 24
+	var body_bot := 68
+	var body_left := 20
+	var body_right := 76
 
-	# Outer glow
-	_soft_ellipse(img, cx, cy, 28.0, 22.0, Color(1.0, 0.8, 0.4, 0.08), 0.5)
+	# ── HEADPHONE BAND — thin silver arc over the top ──
+	# Arc from left pad to right pad
+	for i in 60:
+		var t := float(i) / 59.0
+		var bx := 10.0 + t * 76.0
+		var by := 22.0 - sin(t * PI) * 20.0
+		_soft_circle(img, bx, by, 1.2, Color(0.7, 0.7, 0.72, 0.7), 0.3)
+	# Band highlight
+	for i in 40:
+		var t := float(i) / 39.0
+		var bx := 20.0 + t * 56.0
+		var by := 20.0 - sin(t * PI) * 18.0
+		_soft_circle(img, bx, by, 0.6, Color(0.85, 0.85, 0.87, 0.3), 0.5)
 
-	# Main cassette body — warm brown/amber
-	_rect_rounded(img, 10, 14, 54, 42, Color(0.55, 0.38, 0.22), 4.0)
-	# Top label area — lighter
-	_rect_rounded(img, 13, 16, 51, 28, Color(0.72, 0.6, 0.42), 2.0)
-	# Label text lines (decorative)
-	_soft_line_h(img, 19, 16, 48, Color(0.5, 0.4, 0.28, 0.5), 1.0)
-	_soft_line_h(img, 22, 16, 42, Color(0.5, 0.4, 0.28, 0.3), 1.0)
-	_soft_line_h(img, 25, 16, 45, Color(0.5, 0.4, 0.28, 0.4), 1.0)
+	# ── HEADPHONE YOKES — black arms connecting band to pads ──
+	# Left yoke
+	_soft_ellipse(img, 14, 18, 2.5, 8.0, Color(0.1, 0.1, 0.12))
+	_soft_ellipse(img, 12, 28, 2.0, 6.0, Color(0.1, 0.1, 0.12))
+	# Right yoke
+	_soft_ellipse(img, 82, 18, 2.5, 8.0, Color(0.1, 0.1, 0.12))
+	_soft_ellipse(img, 84, 28, 2.0, 6.0, Color(0.1, 0.1, 0.12))
 
-	# Tape window
-	_rect_rounded(img, 18, 30, 46, 40, Color(0.12, 0.1, 0.08), 2.0)
+	# ── ORANGE HEADPHONE PADS — large, fuzzy, warm ──
+	# Left pad — outer
+	_soft_circle(img, 10, 38, 10.0, Color(0.92, 0.6, 0.12), 0.2)
+	# Left pad — foam texture (lighter center)
+	_soft_circle(img, 10, 38, 7.0, Color(0.95, 0.65, 0.15, 0.6), 0.3)
+	_soft_circle(img, 9, 36, 4.0, Color(0.98, 0.72, 0.2, 0.4), 0.4)
+	# Left pad — speaker center dark
+	_soft_circle(img, 10, 38, 3.0, Color(0.3, 0.2, 0.08, 0.3), 0.3)
 
-	# Tape reels
-	_soft_circle(img, cx - 8, 35, 4.5, Color(0.25, 0.2, 0.15))
-	_soft_circle(img, cx + 8, 35, 4.5, Color(0.25, 0.2, 0.15))
-	# Reel centers
-	_soft_circle(img, cx - 8, 35, 2.0, Color(0.4, 0.35, 0.25))
-	_soft_circle(img, cx + 8, 35, 2.0, Color(0.4, 0.35, 0.25))
+	# Right pad — outer
+	_soft_circle(img, 86, 38, 10.0, Color(0.92, 0.6, 0.12), 0.2)
+	# Right pad — foam texture
+	_soft_circle(img, 86, 38, 7.0, Color(0.95, 0.65, 0.15, 0.6), 0.3)
+	_soft_circle(img, 87, 36, 4.0, Color(0.98, 0.72, 0.2, 0.4), 0.4)
+	# Right pad — speaker center
+	_soft_circle(img, 86, 38, 3.0, Color(0.3, 0.2, 0.08, 0.3), 0.3)
+
+	# ── WALKMAN BODY — steel blue ──
+	var blue := Color(0.42, 0.55, 0.72)
+	var blue_dark := Color(0.35, 0.48, 0.65)
+	var blue_light := Color(0.5, 0.62, 0.78)
+	_rect_rounded(img, body_left, body_top, body_right, body_bot, blue, 4.0)
+
+	# ── SILVER TOP SECTION ──
+	var silver := Color(0.72, 0.72, 0.74)
+	var silver_light := Color(0.82, 0.82, 0.84)
+	_rect_rounded(img, body_left, body_top, body_right, body_top + 12, silver, 4.0)
+	# Silver highlight
+	_soft_ellipse(img, cx, body_top + 4, 22.0, 3.0, Color(silver_light.r, silver_light.g, silver_light.b, 0.4), 0.4)
+	# Dividing line between silver and blue
+	_soft_line_h(img, body_top + 12, body_left + 1, body_right - 1, Color(0.3, 0.4, 0.55, 0.5), 1.0)
+
+	# ── VOLUME SLIDER on silver top — vertical toggle (like TPS-L2) ──
+	var slider_x := body_left + 6
+	var slider_top := body_top + 2
+	var slider_bot := body_top + 10
+	# Slider track/groove — dark recessed slot
+	_rect_rounded(img, slider_x - 2, slider_top, slider_x + 2, slider_bot, Color(0.15, 0.15, 0.17), 1.0)
+	# Track inner shadow
+	_soft_ellipse(img, slider_x, (slider_top + slider_bot) / 2.0, 1.5, 4.0, Color(0.1, 0.1, 0.12, 0.5), 0.2)
+	# Slider knob — silver/white rectangle, positioned at middle
+	var knob_y := slider_top + 3
+	_rect_rounded(img, slider_x - 2, knob_y, slider_x + 2, knob_y + 3, Color(0.85, 0.85, 0.87), 1.0)
+	# Knob highlight
+	_soft_ellipse(img, slider_x, knob_y + 1, 1.5, 1.0, Color(0.95, 0.95, 0.97, 0.5), 0.3)
+	# Tick marks beside slider — NORM MID MAX (tiny dots)
+	_soft_circle(img, slider_x + 4, slider_top + 1, 0.5, Color(0.55, 0.5, 0.4, 0.5))
+	_soft_circle(img, slider_x + 4, slider_top + 4, 0.5, Color(0.55, 0.5, 0.4, 0.5))
+	_soft_circle(img, slider_x + 4, slider_top + 7, 0.5, Color(0.55, 0.5, 0.4, 0.5))
+
+	# ── PLAY ARROW on blue body ──
+	# Triangle arrow pointing right
+	for y_off in range(-5, 6):
+		var arrow_w := int(5 - absi(y_off) * 0.8)
+		if arrow_w > 0:
+			var ay := int(cy - 6 + y_off)
+			_soft_line_h(img, ay, int(cx - 6), int(cx - 6 + arrow_w), Color(0.8, 0.82, 0.85, 0.6), 1.0)
+
+	# ── TAPE WINDOW — dark rectangle with visible reels ──
+	var win_left := 38
+	var win_right := 72
+	var win_top := 44
+	var win_bot := 60
+	_rect_rounded(img, win_left, win_top, win_right, win_bot, Color(0.08, 0.08, 0.1), 2.0)
+	# Window frame
+	_soft_line_h(img, win_top, win_left, win_right, Color(0.3, 0.35, 0.4, 0.3), 1.0)
+	_soft_line_h(img, win_bot, win_left, win_right, Color(0.3, 0.35, 0.4, 0.3), 1.0)
+
+	# Tape reels inside window
+	var reel_y := (win_top + win_bot) / 2.0
+	_soft_circle(img, 47, reel_y, 5.0, Color(0.2, 0.18, 0.16))
+	_soft_circle(img, 63, reel_y, 5.0, Color(0.2, 0.18, 0.16))
 	# Reel hubs
-	_soft_circle(img, cx - 8, 35, 0.8, Color(0.15, 0.12, 0.1))
-	_soft_circle(img, cx + 8, 35, 0.8, Color(0.15, 0.12, 0.1))
-	# Tape between reels
-	_soft_line_h(img, 32, int(cx - 3), int(cx + 3), Color(0.35, 0.25, 0.15, 0.6), 1.5)
+	_soft_circle(img, 47, reel_y, 2.5, Color(0.35, 0.3, 0.25))
+	_soft_circle(img, 63, reel_y, 2.5, Color(0.35, 0.3, 0.25))
+	_soft_circle(img, 47, reel_y, 1.0, Color(0.15, 0.12, 0.1))
+	_soft_circle(img, 63, reel_y, 1.0, Color(0.15, 0.12, 0.1))
+	# Tape strip between reels
+	_soft_line_h(img, int(reel_y - 3), 50, 60, Color(0.3, 0.22, 0.15, 0.5), 1.0)
+	# Light patch in tape window
+	_soft_ellipse(img, 55, reel_y - 2, 5.0, 2.0, Color(0.25, 0.22, 0.2, 0.3), 0.4)
 
-	# Bass strings below — 4 strings with warm golden color
+	# ── JACK PORTS on left side ──
+	_soft_circle(img, body_left + 3, 42, 1.8, Color(0.2, 0.45, 0.2))  # green
+	_soft_circle(img, body_left + 3, 47, 1.8, Color(0.55, 0.2, 0.2))  # red
+	# Volume wheel at bottom-left
+	_soft_ellipse(img, body_left + 2, 56, 3.0, 5.0, Color(0.12, 0.12, 0.14))
+	_soft_ellipse(img, body_left + 2, 56, 2.0, 4.0, Color(0.18, 0.18, 0.2))
+	# Wheel grip lines
 	for i in 4:
-		var string_y := 46 + i * 3
-		var gold := 0.7 + i * 0.05
-		_soft_line_h(img, string_y, 14, 50, Color(gold, gold * 0.85, 0.3, 0.8 - i * 0.1), 1.2 + i * 0.3)
+		var wy := 53 + i * 2
+		_soft_line_h(img, wy, body_left, body_left + 3, Color(0.25, 0.25, 0.28, 0.4), 0.5)
 
-	# Bass bridge
-	_rect_rounded(img, 12, 44, 52, 46, Color(0.4, 0.3, 0.2, 0.7), 1.0)
+	# ── LABEL TEXT — "WALKMAN" style on blue body ──
+	# Vertical text hint on right side of blue area (just decorative lines)
+	for i in 7:
+		var ly := 38 + i * 3
+		var lw := 2 + (i % 3)
+		_soft_line_h(img, ly, body_right - 10, body_right - 10 + lw, Color(0.7, 0.72, 0.75, 0.25), 0.8)
 
-	# Sound hole (between cassette and strings)
-	_soft_ellipse(img, cx, 44, 6.0, 2.0, Color(0.08, 0.06, 0.05, 0.6))
+	# ── BODY SHADING ──
+	# Slight gradient — lighter at top, darker at bottom
+	for x in range(body_left + 1, body_right):
+		for y in range(body_top + 13, body_bot):
+			var px := img.get_pixel(x, y)
+			if px.a > 0.3:
+				var grad := (float(y - body_top) / float(body_bot - body_top)) * 0.08
+				img.set_pixel(x, y, Color(
+					clampf(px.r - grad, 0, 1),
+					clampf(px.g - grad, 0, 1),
+					clampf(px.b - grad, 0, 1),
+					px.a
+				))
 
-	# Tuning pegs at bottom
-	_soft_circle(img, 16, 57, 2.0, Color(0.5, 0.4, 0.25))
-	_soft_circle(img, 24, 58, 2.0, Color(0.5, 0.4, 0.25))
-	_soft_circle(img, 40, 58, 2.0, Color(0.5, 0.4, 0.25))
-	_soft_circle(img, 48, 57, 2.0, Color(0.5, 0.4, 0.25))
+	# ── BUTTON on top-right of silver section ──
+	_soft_circle(img, 65, body_top + 6, 2.0, Color(0.6, 0.6, 0.62))
+	_soft_circle(img, 65, body_top + 6, 1.0, Color(0.55, 0.55, 0.57))
 
-	# Magical shimmer spots
-	_soft_circle(img, 20, 18, 1.5, Color(1.0, 0.95, 0.7, 0.5), 0.5)
-	_soft_circle(img, 44, 36, 1.2, Color(1.0, 0.9, 0.6, 0.4), 0.5)
-	_soft_circle(img, 30, 48, 1.0, Color(1.0, 0.95, 0.75, 0.3), 0.5)
-
-	# Corner screws
-	_soft_circle(img, 13, 17, 1.2, Color(0.4, 0.35, 0.3))
-	_soft_circle(img, 51, 17, 1.2, Color(0.4, 0.35, 0.3))
-	_soft_circle(img, 13, 40, 1.2, Color(0.4, 0.35, 0.3))
-	_soft_circle(img, 51, 40, 1.2, Color(0.4, 0.35, 0.3))
+	# ── MAGICAL GLOW — subtle warmth from the headphone pads ──
+	_soft_circle(img, 10, 38, 14.0, Color(1.0, 0.75, 0.2, 0.06), 0.6)
+	_soft_circle(img, 86, 38, 14.0, Color(1.0, 0.75, 0.2, 0.06), 0.6)
 
 	return ImageTexture.create_from_image(img)
 

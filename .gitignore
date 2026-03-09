@@ -16,5 +16,12 @@ godot_log.txt
 .DS_Store
 Thumbs.db
 
+# Build output
+build/
+templates.tpz
+
+# Godot UID cache
+*.uid
+
 # Claude
 .claude/

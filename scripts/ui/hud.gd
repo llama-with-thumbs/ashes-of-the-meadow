@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 ## Minimal HUD showing inventory and phase hints
+## Volume is handled by the VolumeWheel control independently
 
 @onready var inventory_label: Label = $InventoryPanel/InventoryLabel
 @onready var hint_label: Label = $HintLabel
@@ -12,7 +13,6 @@ func _ready() -> void:
 
 func _on_item_collected(_type: String, _amount: int) -> void:
 	_update_inventory()
-	# Brief flash on collect
 	inventory_label.modulate = Color(1.0, 0.9, 0.5)
 	var tween := create_tween()
 	tween.tween_property(inventory_label, "modulate", Color.WHITE, 0.5)
