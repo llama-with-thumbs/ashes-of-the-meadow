@@ -111,6 +111,9 @@ volume_db = -6.0
 [node name="HissPlayer" type="AudioStreamPlayer" parent="Sheep"]
 volume_db = -18.0
 
+[node name="AmbientPlayer" type="AudioStreamPlayer" parent="Sheep"]
+volume_db = -12.0
+
 [node name="Camera2D" type="Camera2D" parent="Sheep"]
 zoom = Vector2(1.5, 1.5)
 position_smoothing_enabled = true
