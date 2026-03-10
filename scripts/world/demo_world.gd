@@ -13,7 +13,6 @@ var ending_triggered: bool = false
 var _active_narrations: Array[Label] = []
 
 func _ready() -> void:
-	# Start with black screen
 	fade_rect.color = Color(0, 0, 0, 1)
 	ending_label.visible = false
 	narration_label.visible = false
@@ -21,18 +20,12 @@ func _ready() -> void:
 	GameState.phase_changed.connect(_on_phase_changed)
 	GameState.build_completed.connect(_on_build_completed)
 
-	# Remove cassette pickup — sheep starts with full controls
-	var cassette_device := get_node_or_null("CassettePickup")
-	if cassette_device:
-		cassette_device.queue_free()
-
 	_start_opening()
 
 func _start_opening() -> void:
-	# Player is fully controllable from the start
+	# Player can move immediately — ambient space sound is already playing
 	hud.visible = true
 	player.enable_movement()
-	GameState.has_cassette_bass = true
 
 	# Fade in from black with atmospheric narration
 	var tween := create_tween()
@@ -44,18 +37,22 @@ func _start_opening() -> void:
 		await get_tree().create_timer(5.0).timeout
 		_show_narration("Everything is silent.")
 		await get_tree().create_timer(5.0).timeout
-		_show_narration("Sound pushes you forward... SPACE to pulse, A/D to aim.")
-		await get_tree().create_timer(5.0).timeout
-		_show_narration("Hold SPACE for a stronger pulse. E to interact.")
-		await get_tree().create_timer(5.0).timeout
-		_show_narration("Explore the ruins... gather what remains.")
-		await get_tree().create_timer(5.0).timeout
-		GameState.tutorial_complete = true
-		GameState.advance_phase(GameState.Phase.EXPLORATION)
+		_show_narration("Something is glowing nearby...")
 	)
 
 func _on_phase_changed(new_phase: GameState.Phase) -> void:
 	match new_phase:
+		GameState.Phase.TUTORIAL:
+			_show_narration("A cassette player... it still works.")
+			await get_tree().create_timer(5.0).timeout
+			_show_narration("SPACE to play a note. Sound pushes you forward.")
+			await get_tree().create_timer(5.0).timeout
+			_show_narration("Hold SPACE for a stronger pulse. E to interact.")
+			await get_tree().create_timer(5.0).timeout
+			_show_narration("Explore the ruins... gather what remains.")
+			await get_tree().create_timer(5.0).timeout
+			GameState.tutorial_complete = true
+			GameState.advance_phase(GameState.Phase.EXPLORATION)
 		GameState.Phase.EXPLORATION:
 			_show_narration("Fragments of home... scattered everywhere.")
 		GameState.Phase.BUILDING:
@@ -86,10 +83,9 @@ func _trigger_ending() -> void:
 	_show_narration("A distant bleat, wrapped in static.")
 	await get_tree().create_timer(5.0).timeout
 
-	# Fade to warm color
 	ending_label.visible = true
 	ending_label.modulate.a = 0.0
-	ending_label.text = "You are not alone.\n\n\nAshes of the Meadow\nDemo"
+	ending_label.text = "You are not alone.\n\n\nAshes of the Meadow\nDemo\n\n\nAuthor of the concept: @AnnSerafima\nDeveloper: VFilitovich"
 
 	var tween := create_tween()
 	tween.tween_property(ending_label, "modulate:a", 1.0, 3.0)
@@ -104,7 +100,6 @@ func _show_narration(text: String, duration: float = 5.5) -> void:
 			drift.tween_property(old_lbl, "offset_top", old_lbl.offset_top - 35.0, 0.8).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 			drift.parallel().tween_property(old_lbl, "offset_bottom", old_lbl.offset_bottom - 35.0, 0.8).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
-	# Spawn a new label at the base position
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -123,9 +118,9 @@ func _show_narration(text: String, duration: float = 5.5) -> void:
 	_active_narrations.append(lbl)
 
 	var tween := create_tween()
-	tween.tween_property(lbl, "modulate:a", 1.0, 1.0)      # fade in 1s
-	tween.tween_interval(duration)                            # hold ~5.5s
-	tween.tween_property(lbl, "modulate:a", 0.0, 2.0)       # slow fade out 2s
+	tween.tween_property(lbl, "modulate:a", 1.0, 1.0)
+	tween.tween_interval(duration)
+	tween.tween_property(lbl, "modulate:a", 0.0, 2.0)
 	tween.tween_callback(func():
 		_active_narrations.erase(lbl)
 		lbl.queue_free()

@@ -111,6 +111,9 @@ volume_db = -6.0
 [node name="HissPlayer" type="AudioStreamPlayer" parent="Sheep"]
 volume_db = -18.0
 
+[node name="AmbientPlayer" type="AudioStreamPlayer" parent="Sheep"]
+volume_db = -10.0
+
 [node name="Camera2D" type="Camera2D" parent="Sheep"]
 zoom = Vector2(1.5, 1.5)
 position_smoothing_enabled = true
@@ -346,10 +349,10 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="VolumeWheel" type="Control" parent="UI/HUD"]
-offset_left = 10.0
-offset_top = 110.0
-offset_right = 70.0
-offset_bottom = 290.0
+offset_left = 30.0
+offset_top = 120.0
+offset_right = 90.0
+offset_bottom = 300.0
 script = ExtResource("11")
 
 [node name="FadeRect" type="ColorRect" parent="UI"]
