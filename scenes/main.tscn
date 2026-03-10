@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=25 format=3 uid="uid://main_scene"]
 
 [ext_resource type="Script" path="res://scripts/world/demo_world.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/player/sheep.gd" id="2"]
@@ -11,6 +11,8 @@
 [ext_resource type="Script" path="res://scripts/world/sprite_loader.gd" id="9"]
 [ext_resource type="Shader" path="res://assets/shaders/starfield.gdshader" id="10"]
 [ext_resource type="Script" path="res://scripts/ui/volume_wheel.gd" id="11"]
+[ext_resource type="Script" path="res://scripts/ui/compass.gd" id="12"]
+[ext_resource type="Script" path="res://scripts/objects/compass_pickup.gd" id="13"]
 
 [sub_resource type="ShaderMaterial" id="starfield_mat"]
 shader = ExtResource("10")
@@ -29,6 +31,9 @@ radius = 80.0
 
 [sub_resource type="CircleShape2D" id="cassette_shape"]
 radius = 20.0
+
+[sub_resource type="CircleShape2D" id="compass_shape"]
+radius = 18.0
 
 [sub_resource type="RectangleShape2D" id="homebase_shape"]
 size = Vector2(60, 40)
@@ -129,6 +134,14 @@ shape = SubResource("cassette_shape")
 
 [node name="Sprite2D" type="Sprite2D" parent="CassettePickup"]
 scale = Vector2(0.6, 0.6)
+
+[node name="CompassPickup" type="Area2D" parent="."]
+position = Vector2(-200, -150)
+script = ExtResource("13")
+collision_mask = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CompassPickup"]
+shape = SubResource("compass_shape")
 
 [node name="HomeBase" type="StaticBody2D" parent="."]
 position = Vector2(-300, 50)
@@ -354,6 +367,16 @@ offset_top = 120.0
 offset_right = 90.0
 offset_bottom = 300.0
 script = ExtResource("11")
+
+[node name="Compass" type="Control" parent="UI/HUD"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -110.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 110.0
+script = ExtResource("12")
 
 [node name="FadeRect" type="ColorRect" parent="UI"]
 anchors_preset = 15

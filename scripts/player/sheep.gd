@@ -67,6 +67,15 @@ func enable_movement() -> void:
 	## Enable basic movement (no cassette yet)
 	can_move = true
 
+func receive_compass() -> void:
+	## Compass picked up — show compass UI
+	var compass := get_tree().get_first_node_in_group("compass_ui")
+	if compass:
+		compass.visible = true
+		compass.modulate.a = 0.0
+		var tween := create_tween()
+		tween.tween_property(compass, "modulate:a", 1.0, 0.8)
+
 func receive_cassette() -> void:
 	## Cassette picked up — full sound-powered movement
 	has_cassette = true
