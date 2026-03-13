@@ -430,6 +430,122 @@ static func _generate_stardust(img: Image, cx: float, cy: float) -> void:
 	_soft_circle(img, cx + 7, cy - 5, 0.8, Color(1.0, 1.0, 1.0, 0.5), 0.5)
 	_soft_circle(img, cx + 5, cy + 7, 0.9, Color(1.0, 1.0, 1.0, 0.4), 0.5)
 
+# ─── Asteroid / Space Rock (variable size, sharp edges) ───
+
+static func _build_jagged_outline(cx: float, cy: float, base_r: float, num_verts: int, seed_val: float) -> PackedVector2Array:
+	## Generate irregular polygon vertices with jagged rocky edges
+	var points := PackedVector2Array()
+	for i in num_verts:
+		var angle := float(i) / float(num_verts) * TAU
+		# Vary radius sharply per vertex for jagged look
+		var r_noise := _noise_at(seed_val + float(i) * 13.7, float(i) * 7.3)
+		var r := base_r * (0.6 + r_noise * 0.55)
+		points.append(Vector2(cx + cos(angle) * r, cy + sin(angle) * r))
+	return points
+
+static func _point_in_polygon(p: Vector2, poly: PackedVector2Array) -> bool:
+	var n := poly.size()
+	var inside := false
+	var j := n - 1
+	for i in n:
+		var pi := poly[i]
+		var pj := poly[j]
+		if ((pi.y > p.y) != (pj.y > p.y)) and (p.x < (pj.x - pi.x) * (p.y - pi.y) / (pj.y - pi.y) + pi.x):
+			inside = not inside
+		j = i
+	return inside
+
+static func generate_asteroid(size: int = 48, seed_val: float = 0.0) -> ImageTexture:
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var cx := size / 2.0
+	var cy := size / 2.0
+	var base_r := size * 0.38
+
+	# Rock color with slight variation
+	var rock_color := Color(
+		0.35 + _noise_at(seed_val, 0.0) * 0.15,
+		0.32 + _noise_at(seed_val, 1.0) * 0.12,
+		0.30 + _noise_at(seed_val, 2.0) * 0.15
+	)
+
+	# Build jagged polygon outline (8-12 vertices)
+	var num_verts := 8 + int(_noise_at(seed_val, 3.0) * 5.0)
+	var outline := _build_jagged_outline(cx, cy, base_r, num_verts, seed_val)
+
+	# Fill polygon with rock color + per-pixel shading
+	var light_angle := _noise_at(seed_val, 100.0) * TAU
+	var light_dir := Vector2(cos(light_angle), sin(light_angle))
+
+	for x in size:
+		for y in size:
+			var p := Vector2(x, y)
+			if not _point_in_polygon(p, outline):
+				continue
+
+			# Base shading — directional light
+			var to_center := (p - Vector2(cx, cy)).normalized()
+			var light_factor := to_center.dot(light_dir) * 0.15 + 0.85
+
+			# Surface noise for texture
+			var n := _noise_at(x * 0.4 + seed_val * 100.0, y * 0.4) * 0.15 - 0.075
+
+			# Edge darkening
+			var edge_dist := p.distance_to(Vector2(cx, cy)) / base_r
+			var edge_darken := clampf(edge_dist - 0.4, 0.0, 1.0) * 0.25
+
+			var col := Color(
+				clampf(rock_color.r * light_factor + n - edge_darken, 0, 1),
+				clampf(rock_color.g * light_factor + n * 0.8 - edge_darken, 0, 1),
+				clampf(rock_color.b * light_factor + n * 0.6 - edge_darken, 0, 1),
+				1.0
+			)
+			img.set_pixel(x, y, col)
+
+	# Craters — dark circular dents
+	var num_craters := 2 + int(_noise_at(seed_val, 60.0) * 3.0)
+	for i in num_craters:
+		var angle := _noise_at(seed_val + i, 70.0) * TAU
+		var dist := base_r * 0.25 * _noise_at(seed_val + i, 80.0)
+		var crater_cx := cx + cos(angle) * dist
+		var crater_cy := cy + sin(angle) * dist
+		var crater_r := base_r * (0.08 + _noise_at(seed_val + i, 90.0) * 0.12)
+		for x in range(int(max(crater_cx - crater_r - 1, 0)), int(min(crater_cx + crater_r + 1, size))):
+			for y in range(int(max(crater_cy - crater_r - 1, 0)), int(min(crater_cy + crater_r + 1, size))):
+				var px := img.get_pixel(x, y)
+				if px.a < 0.1:
+					continue
+				var d := Vector2(x, y).distance_to(Vector2(crater_cx, crater_cy))
+				if d < crater_r:
+					var t := 1.0 - d / crater_r
+					img.set_pixel(x, y, Color(px.r * (1.0 - t * 0.3), px.g * (1.0 - t * 0.3), px.b * (1.0 - t * 0.3), px.a))
+
+	# Sharp highlight edge on lit side
+	for i in outline.size():
+		var p1 := outline[i]
+		var p2 := outline[(i + 1) % outline.size()]
+		var edge_mid := (p1 + p2) / 2.0
+		var edge_normal := (edge_mid - Vector2(cx, cy)).normalized()
+		if edge_normal.dot(light_dir) > 0.3:
+			# Bright edge — draw a thin highlight along this segment
+			var steps := int(p1.distance_to(p2))
+			for s in steps:
+				var t := float(s) / float(max(steps, 1))
+				var px := p1.lerp(p2, t)
+				var ix := int(px.x)
+				var iy := int(px.y)
+				if ix >= 0 and ix < size and iy >= 0 and iy < size:
+					var existing := img.get_pixel(ix, iy)
+					if existing.a > 0.1:
+						img.set_pixel(ix, iy, Color(
+							minf(existing.r + 0.15, 1.0),
+							minf(existing.g + 0.12, 1.0),
+							minf(existing.b + 0.1, 1.0),
+							existing.a
+						))
+
+	return ImageTexture.create_from_image(img)
+
 # ─── Debris (80x40) ───
 
 static func generate_debris() -> ImageTexture:

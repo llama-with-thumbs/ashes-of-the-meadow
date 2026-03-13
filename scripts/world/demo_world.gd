@@ -11,6 +11,10 @@ extends Node2D
 
 var ending_triggered: bool = false
 var _active_narrations: Array[Label] = []
+var _asteroids: Array[Sprite2D] = []
+var _asteroid_count: int = 40
+
+const ProceduralSprites = preload("res://scripts/world/procedural_sprites.gd")
 
 func _ready() -> void:
 	fade_rect.color = Color(0, 0, 0, 1)
@@ -20,6 +24,11 @@ func _ready() -> void:
 	GameState.phase_changed.connect(_on_phase_changed)
 	GameState.build_completed.connect(_on_build_completed)
 
+	_asteroid_count = 40
+	var slider := get_node_or_null("UI/HUD/AsteroidSlider")
+	if slider:
+		slider.density_changed.connect(_on_slider_density_changed)
+	_spawn_asteroids(_asteroid_count)
 	_start_opening()
 
 func _start_opening() -> void:
@@ -91,6 +100,68 @@ func _trigger_ending() -> void:
 	tween.tween_property(ending_label, "modulate:a", 1.0, 3.0)
 	tween.tween_interval(8.0)
 	tween.tween_property(fade_rect, "color:a", 1.0, 3.0)
+
+func _on_slider_density_changed(count: int) -> void:
+	_asteroid_count = count
+	_spawn_asteroids(_asteroid_count)
+
+func _update_slider() -> void:
+	var slider := get_node_or_null("UI/HUD/AsteroidSlider")
+	if slider:
+		slider.value = float(_asteroid_count) / 100.0
+		slider.queue_redraw()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed:
+		if event.keycode == KEY_9:
+			_asteroid_count = maxi(_asteroid_count - 10, 0)
+			_spawn_asteroids(_asteroid_count)
+			_update_slider()
+		elif event.keycode == KEY_0:
+			_asteroid_count = mini(_asteroid_count + 10, 100)
+			_spawn_asteroids(_asteroid_count)
+			_update_slider()
+
+func _spawn_asteroids(count: int = 40) -> void:
+	# Remove existing asteroids
+	for a in _asteroids:
+		if is_instance_valid(a):
+			a.queue_free()
+	_asteroids.clear()
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 42  # Deterministic layout
+
+	var spawn_radius := 1200.0
+	var min_dist_from_center := 80.0
+
+	for i in count:
+		var angle := rng.randf() * TAU
+		var dist := min_dist_from_center + rng.randf() * (spawn_radius - min_dist_from_center)
+		var pos := Vector2(cos(angle) * dist, sin(angle) * dist)
+
+		var size_roll := rng.randf()
+		var pixel_size: int
+		var sprite_scale: float
+		if size_roll < 0.5:
+			pixel_size = rng.randi_range(24, 32)
+			sprite_scale = rng.randf_range(0.6, 1.0)
+		elif size_roll < 0.85:
+			pixel_size = rng.randi_range(40, 56)
+			sprite_scale = rng.randf_range(0.8, 1.2)
+		else:
+			pixel_size = rng.randi_range(64, 80)
+			sprite_scale = rng.randf_range(1.0, 1.5)
+
+		var asteroid := Sprite2D.new()
+		asteroid.texture = ProceduralSprites.generate_asteroid(pixel_size, float(i) * 7.3)
+		asteroid.position = pos
+		asteroid.rotation = rng.randf() * TAU
+		asteroid.scale = Vector2(sprite_scale, sprite_scale)
+		asteroid.modulate.a = rng.randf_range(0.5, 1.0)
+		asteroid.z_index = -1
+		add_child(asteroid)
+		_asteroids.append(asteroid)
 
 func _show_narration(text: String, duration: float = 5.5) -> void:
 	# Drift existing labels upward

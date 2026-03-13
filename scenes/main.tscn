@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=26 format=3 uid="uid://main_scene"]
 
 [ext_resource type="Script" path="res://scripts/world/demo_world.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/player/sheep.gd" id="2"]
@@ -13,6 +13,7 @@
 [ext_resource type="Script" path="res://scripts/ui/volume_wheel.gd" id="11"]
 [ext_resource type="Script" path="res://scripts/ui/compass.gd" id="12"]
 [ext_resource type="Script" path="res://scripts/objects/compass_pickup.gd" id="13"]
+[ext_resource type="Script" path="res://scripts/ui/asteroid_slider.gd" id="14"]
 
 [sub_resource type="ShaderMaterial" id="starfield_mat"]
 shader = ExtResource("10")
@@ -367,6 +368,13 @@ offset_top = 120.0
 offset_right = 90.0
 offset_bottom = 300.0
 script = ExtResource("11")
+
+[node name="AsteroidSlider" type="Control" parent="UI/HUD"]
+offset_left = 30.0
+offset_top = 310.0
+offset_right = 90.0
+offset_bottom = 450.0
+script = ExtResource("14")
 
 [node name="Compass" type="Control" parent="UI/HUD"]
 anchors_preset = 1
