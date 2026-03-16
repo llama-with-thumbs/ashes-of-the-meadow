@@ -17,6 +17,7 @@ var can_move: bool = false
 var has_cassette: bool = false
 var facing_right: bool = true
 var original_modulate: Color
+var _sheep_sprites: Dictionary = {}  # Set by sprite_loader
 
 # Audio generation state
 var _bass_playing: bool = false
@@ -260,7 +261,7 @@ func _physics_process(delta: float) -> void:
 	var rot_input := Input.get_axis("move_left", "move_right")
 	rotation += rot_input * rotation_speed * delta
 
-	# Update facing
+	# Update facing and directional sprite
 	var aim_dir := Vector2.from_angle(rotation - PI / 2.0)
 	if aim_dir.x > 0.1:
 		facing_right = true
@@ -268,6 +269,32 @@ func _physics_process(delta: float) -> void:
 	elif aim_dir.x < -0.1:
 		facing_right = false
 		sprite.flip_h = true
+
+	if _sheep_sprites.size() > 0:
+		var angle := aim_dir.angle()  # -PI to PI, 0=right
+		var deg := rad_to_deg(angle)
+		# Map angle to sprite direction
+		# Up=-90, Down=90, Right=0, Left=180/-180
+		var key: String
+		if deg > -22.5 and deg <= 22.5:
+			key = "side_right"
+		elif deg > 22.5 and deg <= 67.5:
+			key = "front_right"
+		elif deg > 67.5 and deg <= 112.5:
+			key = "front"
+		elif deg > 112.5 and deg <= 157.5:
+			key = "front_left"
+		elif deg > 157.5 or deg <= -157.5:
+			key = "side_left"
+		elif deg > -157.5 and deg <= -112.5:
+			key = "back_left"
+		elif deg > -112.5 and deg <= -67.5:
+			key = "back"
+		else:
+			key = "back_right"
+		if _sheep_sprites.has(key) and _sheep_sprites[key] != null:
+			sprite.texture = _sheep_sprites[key]
+			sprite.flip_h = false  # Sprites already have correct orientation
 
 	# Charge bass pulse
 	if Input.is_action_pressed("bass_pulse"):

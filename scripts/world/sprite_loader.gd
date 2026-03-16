@@ -13,12 +13,26 @@ func _ready() -> void:
 func _assign_textures() -> void:
 	var root := get_parent()
 
-	# Player sheep
+	# Player sheep — load 3D rendered sprites
 	var sheep := root.get_node_or_null("Sheep")
 	if sheep:
 		var sprite: Sprite2D = sheep.get_node_or_null("Sprite2D")
 		if sprite:
-			sprite.texture = ProceduralSprites.generate_sheep()
+			var front_tex := load("res://assets/sprites/sheep_front.png")
+			if front_tex:
+				sprite.texture = front_tex
+				sheep._sheep_sprites = {
+					"front": front_tex,
+					"front_left": load("res://assets/sprites/sheep_front_left.png"),
+					"front_right": load("res://assets/sprites/sheep_front_right.png"),
+					"side_left": load("res://assets/sprites/sheep_side_left.png"),
+					"side_right": load("res://assets/sprites/sheep_side_right.png"),
+					"back": load("res://assets/sprites/sheep_back.png"),
+					"back_left": load("res://assets/sprites/sheep_back_left.png"),
+					"back_right": load("res://assets/sprites/sheep_back_right.png"),
+				}
+			else:
+				sprite.texture = ProceduralSprites.generate_sheep()
 		var cassette: Sprite2D = sheep.get_node_or_null("CassetteSprite")
 		if cassette:
 			cassette.texture = ProceduralSprites.generate_cassette()
