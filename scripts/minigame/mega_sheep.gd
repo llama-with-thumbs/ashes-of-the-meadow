@@ -22,9 +22,13 @@ const HUD_H: float = 64.0  # Top panel height
 var sheep_pos: Vector2 = Vector2(140, 400)
 var sheep_speed: float = 280.0
 var sheep_hitbox: float = 15.0
-var sheep_frames: Array[ImageTexture] = []
+var sheep_frames_neutral: Array[ImageTexture] = []
+var sheep_frames_up: Array[ImageTexture] = []
+var sheep_frames_down: Array[ImageTexture] = []
+var sheep_frames: Array[ImageTexture] = []  # Current active set
 var sheep_frame_idx: int = 0
 var sheep_anim_timer: float = 0.0
+var sheep_dir: int = 0  # 0=neutral, 1=up, 2=down
 var lives: int = 3
 const MAX_LIVES: int = 5
 var invincible: float = 0.0
@@ -260,7 +264,10 @@ var _item_particle_colors: Dictionary = {
 # ─── Lifecycle ───
 
 func _ready() -> void:
-	sheep_frames = [RetroSprites.generate_pixel_sheep(), RetroSprites.generate_pixel_sheep_frame2()]
+	sheep_frames_neutral = [RetroSprites.generate_pixel_sheep(0, 0), RetroSprites.generate_pixel_sheep(1, 0)]
+	sheep_frames_up = [RetroSprites.generate_pixel_sheep(0, 1), RetroSprites.generate_pixel_sheep(1, 1)]
+	sheep_frames_down = [RetroSprites.generate_pixel_sheep(0, 2), RetroSprites.generate_pixel_sheep(1, 2)]
+	sheep_frames = sheep_frames_neutral
 	heart_full_tex = RetroSprites.generate_heart()
 	heart_empty_tex = RetroSprites.generate_heart_empty()
 	for ct in COLLECT_TYPES:
@@ -310,7 +317,7 @@ func _build_hud() -> void:
 	sheep_sprite = Sprite2D.new()
 	sheep_sprite.texture = sheep_frames[0]
 	sheep_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	sheep_sprite.scale = Vector2(2.2, 2.2)
+	sheep_sprite.scale = Vector2(1.9, 1.9)
 	sheep_sprite.z_index = 20
 	add_child(sheep_sprite)
 
@@ -718,6 +725,20 @@ func _process(delta: float) -> void:
 	sheep_pos.x = clampf(sheep_pos.x, 40.0, W * 0.3)
 	sheep_pos.y = clampf(sheep_pos.y, HUD_H + 20.0, H - 30.0)
 	sheep_sprite.position = sheep_pos
+
+	# Switch sprite set based on vertical movement
+	var new_dir := 0
+	if move.y < -0.3:
+		new_dir = 1  # Up
+	elif move.y > 0.3:
+		new_dir = 2  # Down
+	if new_dir != sheep_dir:
+		sheep_dir = new_dir
+		match sheep_dir:
+			0: sheep_frames = sheep_frames_neutral
+			1: sheep_frames = sheep_frames_up
+			2: sheep_frames = sheep_frames_down
+		sheep_sprite.texture = sheep_frames[sheep_frame_idx % sheep_frames.size()]
 
 	sheep_anim_timer += delta
 	if sheep_anim_timer > 0.2:
@@ -1583,7 +1604,7 @@ func _draw() -> void:
 		gs_alpha *= 0.12  # Very faint
 		var gp: Vector2 = gs.pos + shake_offset
 		# Draw ghostly sheep silhouette
-		draw_texture_rect(sheep_frames[gs.frame], Rect2(gp.x - 18, gp.y - 18, 36, 36), false, Color(0.7, 0.75, 1.0, gs_alpha))
+		draw_texture_rect(sheep_frames_neutral[gs.frame], Rect2(gp.x - 22, gp.y - 22, 44, 44), false, Color(0.7, 0.75, 1.0, gs_alpha))
 
 	# Whisper words (single words fading through space)
 	if state == State.PLAYING:

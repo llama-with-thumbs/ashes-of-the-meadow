@@ -27,151 +27,243 @@ static func _px_circle(img: Image, cx: int, cy: int, r: int, col: Color) -> void
 			if (x - cx) * (x - cx) + (y - cy) * (y - cy) <= r * r:
 				_px(img, x, y, col)
 
-# ─── Pixel Sheep (40x40) — Children's book lamb ───
-# Wavy woolly edges, small curved horns, floppy ear, round spiral eyes,
-# thin stick legs — like a classic storybook illustration.
+# ─── Pixel Sheep (48x48) — Storybook lamb with gear ───
+# Wavy woolly body, curved horns, floppy ear, goggles, headphones,
+# flowing superhero cape. Directional variants for up/down tilt.
+# dir: 0=neutral, 1=tilted up, 2=tilted down
 
-static func _draw_sheep_body(img: Image, leg_frame: int) -> void:
-	var s := 40
+static func _draw_sheep_body(img: Image, leg_frame: int, dir: int = 0) -> void:
+	var s := 48
 
-	# Storybook palette — bright white wool, dark outlines, warm accents
-	var wool := _md(0.95, 0.92, 0.88)          # Off-white wool
-	var wool_light := _md(1.0, 1.0, 0.98)      # Bright highlight
-	var wool_mid := _md(0.88, 0.84, 0.78)      # Mid tone
-	var wool_shadow := _md(0.78, 0.72, 0.65)   # Shadow
-	var face := _md(0.95, 0.88, 0.82)          # Warm cream face
-	var face_light := _md(1.0, 0.95, 0.9)      # Highlight
-	var eye := _md(0.12, 0.1, 0.12)            # Dark — simple dots
-	var eye_shine := _md(1.0, 1.0, 1.0)        # Sparkle
-	var nose := _md(0.3, 0.25, 0.22)           # Dark nose
-	var ear_dark := _md(0.3, 0.28, 0.25)       # Dark floppy ear
-	var ear_inner := _md(0.55, 0.45, 0.4)      # Inner ear
-	var horn := _md(0.3, 0.28, 0.25)           # Dark curved horns
-	var legs := _md(0.82, 0.75, 0.65)          # Warm legs
-	var legs_dark := _md(0.65, 0.55, 0.45)     # Leg shadow
-	var hooves := _md(0.45, 0.35, 0.28)        # Hooves
-	var outline := _md(0.2, 0.18, 0.15)        # Dark outline (storybook ink)
+	# Palette
+	var wool := _md(0.95, 0.92, 0.88)
+	var wool_light := _md(1.0, 1.0, 0.98)
+	var wool_mid := _md(0.88, 0.84, 0.78)
+	var wool_shadow := _md(0.78, 0.72, 0.65)
+	var face := _md(0.95, 0.88, 0.82)
+	var face_light := _md(1.0, 0.95, 0.9)
+	var face_shadow := _md(0.82, 0.72, 0.62)
+	var eye := _md(0.12, 0.1, 0.12)
+	var eye_shine := _md(1.0, 1.0, 1.0)
+	var nose := _md(0.3, 0.25, 0.22)
+	var ear_dark := _md(0.3, 0.28, 0.25)
+	var ear_inner := _md(0.55, 0.45, 0.4)
+	var horn := _md(0.3, 0.28, 0.25)
+	var legs := _md(0.82, 0.75, 0.65)
+	var legs_dark := _md(0.65, 0.55, 0.45)
+	var hooves := _md(0.45, 0.35, 0.28)
+	var outline := _md(0.2, 0.18, 0.15)
+	# Gear colors
+	var goggle_frame := _md(0.45, 0.35, 0.25)
+	var goggle_lens := _md(0.4, 0.7, 0.9)
+	var goggle_shine := _md(0.7, 0.9, 1.0)
+	var goggle_strap := _md(0.35, 0.28, 0.2)
+	var hp_band := _md(0.25, 0.22, 0.2)
+	var hp_cup := _md(0.3, 0.28, 0.25)
+	var hp_pad := _md(0.5, 0.45, 0.4)
+	var hp_detail := _md(0.6, 0.55, 0.5)
+	var cape := _md(0.7, 0.15, 0.15)
+	var cape_light := _md(0.85, 0.25, 0.2)
+	var cape_dark := _md(0.5, 0.1, 0.1)
+	var cape_deep := _md(0.35, 0.08, 0.08)
 
-	# ── Woolly body — wavy bumpy edges like the reference ──
-	# Main body mass (slightly wider, left of center for head room)
-	_px_circle(img, 14, 18, 10, wool)
-	_px_circle(img, 11, 16, 8, wool)
-	_px_circle(img, 18, 16, 8, wool)
-	_px_circle(img, 14, 14, 7, wool)
+	# Direction offsets for perspective tilt
+	var dy_head := 0   # Head vertical shift
+	var dy_body := 0   # Body vertical shift
+	var dy_legs := 0   # Leg vertical shift
+	if dir == 1:   # Tilted UP — head rises, rear dips
+		dy_head = -2
+		dy_body = -1
+		dy_legs = 1
+	elif dir == 2: # Tilted DOWN — head dips, rear rises
+		dy_head = 2
+		dy_body = 1
+		dy_legs = -1
 
-	# Wavy top edge — bumpy cloud-like silhouette
-	_px_circle(img, 8, 11, 4, wool)
-	_px_circle(img, 13, 9, 4, wool)
-	_px_circle(img, 18, 10, 4, wool)
-	_px_circle(img, 22, 12, 3, wool)
-	_px_circle(img, 10, 9, 3, wool)
-	_px_circle(img, 16, 8, 3, wool)
-
-	# Wavy side edges
-	_px_circle(img, 5, 15, 4, wool)
-	_px_circle(img, 5, 19, 3, wool)
-	_px_circle(img, 23, 15, 4, wool)
-	_px_circle(img, 24, 19, 3, wool)
-
+	# ═══ CAPE (drawn first, behind everything) ═══
+	# Flowing cape attached at neck area, billowing behind
+	var cape_x := 4
+	var cape_y := 14 + dy_body
+	# Main cape body — large flowing shape
+	_px_circle(img, cape_x + 4, cape_y + 6, 6, cape)
+	_px_circle(img, cape_x + 2, cape_y + 10, 5, cape)
+	_px_circle(img, cape_x + 6, cape_y + 4, 5, cape)
+	_px_circle(img, cape_x, cape_y + 14, 4, cape)
+	_px_circle(img, cape_x + 3, cape_y + 12, 5, cape_dark)
+	# Cape folds and waves
+	_px_rect(img, cape_x - 2, cape_y + 3, cape_x + 8, cape_y + 16, cape)
+	_px_rect(img, cape_x - 3, cape_y + 8, cape_x + 3, cape_y + 18, cape)
 	# Wavy bottom edge
-	_px_circle(img, 8, 24, 3, wool)
-	_px_circle(img, 13, 25, 3, wool)
-	_px_circle(img, 18, 24, 3, wool)
-	_px_circle(img, 22, 23, 3, wool)
+	_px_circle(img, cape_x - 2, cape_y + 17, 3, cape)
+	_px_circle(img, cape_x + 3, cape_y + 19, 3, cape_dark)
+	_px_circle(img, cape_x + 7, cape_y + 16, 2, cape)
+	if dir == 1:
+		# Cape billows down more when going up
+		_px_circle(img, cape_x - 1, cape_y + 20, 3, cape_dark)
+		_px_circle(img, cape_x + 4, cape_y + 21, 2, cape_deep)
+	elif dir == 2:
+		# Cape flutters up when going down
+		_px_circle(img, cape_x + 1, cape_y - 2, 3, cape)
+		_px_circle(img, cape_x + 5, cape_y - 1, 2, cape_light)
+	# Shading — highlights on left/top folds
+	_px_circle(img, cape_x + 5, cape_y + 4, 3, cape_light)
+	_px_circle(img, cape_x + 2, cape_y + 6, 2, cape_light)
+	# Deep shadow on right/bottom folds
+	_px_circle(img, cape_x, cape_y + 15, 3, cape_deep)
+	_px_circle(img, cape_x + 5, cape_y + 12, 2, cape_dark)
 
-	# ── Wool shading — top-left highlight, bottom shadow ──
-	_px_circle(img, 10, 11, 3, wool_light)
-	_px_circle(img, 14, 9, 2, wool_light)
-	_px_circle(img, 7, 15, 3, wool_light)
-	_px_circle(img, 17, 19, 4, wool_mid)
-	_px_circle(img, 20, 22, 3, wool_shadow)
-	_px_circle(img, 14, 24, 3, wool_shadow)
-	# Fluff detail dots
-	_px(img, 9, 10, wool_light); _px(img, 15, 8, wool_light)
-	_px(img, 6, 14, wool_light); _px(img, 20, 11, wool_mid)
-	_px(img, 12, 22, wool_mid); _px(img, 21, 17, wool_shadow)
+	# ═══ WOOLLY BODY ═══
+	var bx := 16
+	var by := 18 + dy_body
+	# Main mass
+	_px_circle(img, bx, by, 10, wool)
+	_px_circle(img, bx - 3, by - 2, 8, wool)
+	_px_circle(img, bx + 4, by - 2, 8, wool)
+	_px_circle(img, bx, by - 4, 7, wool)
+	# Wavy top edge
+	_px_circle(img, bx - 6, by - 7, 4, wool)
+	_px_circle(img, bx - 1, by - 9, 4, wool)
+	_px_circle(img, bx + 4, by - 8, 4, wool)
+	_px_circle(img, bx + 8, by - 6, 3, wool)
+	_px_circle(img, bx - 4, by - 9, 3, wool)
+	_px_circle(img, bx + 2, by - 10, 3, wool)
+	# Wavy sides
+	_px_circle(img, bx - 9, by - 3, 4, wool)
+	_px_circle(img, bx - 9, by + 1, 3, wool)
+	_px_circle(img, bx + 9, by - 3, 4, wool)
+	_px_circle(img, bx + 10, by + 1, 3, wool)
+	# Wavy bottom
+	_px_circle(img, bx - 6, by + 6, 3, wool)
+	_px_circle(img, bx - 1, by + 7, 3, wool)
+	_px_circle(img, bx + 4, by + 6, 3, wool)
+	_px_circle(img, bx + 8, by + 5, 3, wool)
+	# Shading
+	_px_circle(img, bx - 4, by - 7, 3, wool_light)
+	_px_circle(img, bx, by - 9, 2, wool_light)
+	_px_circle(img, bx - 7, by - 2, 3, wool_light)
+	_px_circle(img, bx + 3, by + 1, 4, wool_mid)
+	_px_circle(img, bx + 6, by + 4, 3, wool_shadow)
+	_px_circle(img, bx, by + 6, 3, wool_shadow)
+	# Fluff details
+	_px(img, bx - 5, by - 8, wool_light); _px(img, bx + 1, by - 10, wool_light)
+	_px(img, bx - 8, by - 1, wool_light); _px(img, bx + 6, by - 7, wool_mid)
+	_px(img, bx - 2, by + 5, wool_mid); _px(img, bx + 7, by - 1, wool_shadow)
 
-	# ── Head/face — right side, round ──
-	_px_circle(img, 30, 15, 7, face)
-	_px_circle(img, 31, 14, 6, face)
-	_px_circle(img, 29, 13, 4, face_light)
+	# ═══ HEAD / FACE ═══
+	var hx := 35
+	var hy := 15 + dy_head
+	_px_circle(img, hx, hy, 7, face)
+	_px_circle(img, hx + 1, hy - 1, 6, face)
+	_px_circle(img, hx - 1, hy - 2, 4, face_light)
+	_px_circle(img, hx + 1, hy + 3, 3, face_shadow)
+	# Wool overlap onto head
+	_px_circle(img, hx - 6, hy - 2, 4, wool)
+	_px_circle(img, hx - 5, hy + 2, 3, wool)
+	_px_circle(img, hx - 5, hy - 5, 3, wool)
 
-	# Wool overlapping onto head
-	_px_circle(img, 25, 13, 4, wool)
-	_px_circle(img, 25, 17, 3, wool)
-	_px_circle(img, 26, 10, 3, wool)
+	# ── Curved horns ──
+	_px(img, hx - 2, hy - 8, horn); _px(img, hx - 1, hy - 9, horn)
+	_px(img, hx, hy - 10, horn); _px(img, hx + 1, hy - 10, horn)
+	_px(img, hx + 2, hy - 9, horn); _px(img, hx + 2, hy - 8, horn)
+	# Second horn (behind)
+	_px(img, hx - 5, hy - 7, horn); _px(img, hx - 6, hy - 8, horn)
+	_px(img, hx - 6, hy - 9, horn); _px(img, hx - 5, hy - 9, horn)
 
-	# ── Curved horns — small, dark, curving outward ──
-	# Right horn (C-curve going up-right)
-	_px(img, 29, 7, horn); _px(img, 30, 6, horn); _px(img, 31, 5, horn)
-	_px(img, 32, 5, horn); _px(img, 33, 6, horn); _px(img, 33, 7, horn)
-	# Left horn (peeking behind, shorter)
-	_px(img, 27, 7, horn); _px(img, 26, 6, horn); _px(img, 25, 6, horn)
-	_px(img, 25, 7, horn)
+	# ── Floppy ear ──
+	_px_rect(img, hx - 5, hy - 1, hx - 3, hy + 5, ear_dark)
+	_px(img, hx - 6, hy, ear_dark); _px(img, hx - 6, hy + 1, ear_dark)
+	_px(img, hx - 6, hy + 2, ear_dark); _px(img, hx - 2, hy, ear_dark)
+	_px(img, hx - 4, hy + 1, ear_inner); _px(img, hx - 4, hy + 2, ear_inner)
+	_px(img, hx - 3, hy + 2, ear_inner)
 
-	# ── Floppy ear — dark, drooping to the left ──
-	_px_rect(img, 26, 13, 27, 19, ear_dark)
-	_px(img, 25, 14, ear_dark); _px(img, 25, 15, ear_dark)
-	_px(img, 25, 16, ear_dark); _px(img, 25, 17, ear_dark)
-	_px(img, 28, 14, ear_dark); _px(img, 28, 15, ear_dark)
-	# Ear inner detail
-	_px(img, 27, 15, ear_inner); _px(img, 27, 16, ear_inner)
-	_px(img, 26, 16, ear_inner)
+	# ── Goggles — round lenses on forehead ──
+	# Strap going around head
+	_px_rect(img, hx - 4, hy - 5, hx + 5, hy - 4, goggle_strap)
+	_px(img, hx - 5, hy - 4, goggle_strap); _px(img, hx + 6, hy - 4, goggle_strap)
+	# Left lens frame (circle)
+	_px_circle(img, hx + 1, hy - 3, 3, goggle_frame)
+	_px_circle(img, hx + 1, hy - 3, 2, goggle_lens)
+	_px(img, hx, hy - 4, goggle_shine); _px(img, hx + 1, hy - 4, goggle_shine)
+	# Right lens frame (peeking)
+	_px_circle(img, hx - 3, hy - 3, 2, goggle_frame)
+	_px_circle(img, hx - 3, hy - 3, 1, goggle_lens)
+	_px(img, hx - 3, hy - 4, goggle_shine)
+	# Bridge between lenses
+	_px(img, hx - 1, hy - 3, goggle_frame)
 
-	# ── Eyes — round, with spiral hint (like the reference) ──
-	# Main eye
-	_px(img, 32, 12, eye); _px(img, 33, 12, eye)
-	_px(img, 32, 13, eye); _px(img, 33, 13, eye)
-	_px(img, 34, 12, eye); _px(img, 34, 13, eye)
-	# Spiral hint (small inner mark)
-	_px(img, 33, 12, eye_shine)
-	_px(img, 32, 13, _md(0.25, 0.22, 0.2))
+	# ── Headphones — over ear with band ──
+	# Band over top of head (behind horns)
+	_px_rect(img, hx - 3, hy - 7, hx + 2, hy - 7, hp_band)
+	_px(img, hx - 4, hy - 6, hp_band); _px(img, hx + 3, hy - 6, hp_band)
+	# Ear cup (visible side — on the ear area)
+	_px_rect(img, hx - 7, hy - 2, hx - 5, hy + 3, hp_cup)
+	_px_rect(img, hx - 6, hy - 1, hx - 6, hy + 2, hp_pad)
+	_px(img, hx - 6, hy, hp_detail)
+	# Far ear cup hint
+	_px_rect(img, hx + 4, hy - 1, hx + 5, hy + 2, hp_cup)
+	_px(img, hx + 4, hy, hp_pad)
 
-	# ── Snout/nose — small, dark ──
-	_px_circle(img, 36, 16, 2, face)
-	_px(img, 37, 16, nose); _px(img, 37, 15, nose)
-	# Little mouth line
-	_px(img, 36, 18, nose); _px(img, 35, 19, _md(0.4, 0.35, 0.3))
+	# ── Eyes — round with spiral hint ──
+	var ey := hy + 0
+	if dir == 1: ey -= 1   # Looking up
+	if dir == 2: ey += 1   # Looking down
+	_px(img, hx + 2, ey, eye); _px(img, hx + 3, ey, eye)
+	_px(img, hx + 2, ey + 1, eye); _px(img, hx + 3, ey + 1, eye)
+	_px(img, hx + 4, ey, eye); _px(img, hx + 4, ey + 1, eye)
+	# Sparkle
+	_px(img, hx + 2, ey, eye_shine)
+	_px(img, hx + 3, ey, _md(0.3, 0.25, 0.25))
 
-	# ── Legs — thin stick legs, like the illustration ──
+	# ── Snout / nose ──
+	var ny := hy + 2
+	if dir == 1: ny -= 1
+	if dir == 2: ny += 1
+	_px_circle(img, hx + 6, ny, 2, face)
+	_px(img, hx + 7, ny, nose); _px(img, hx + 7, ny - 1, nose)
+	_px(img, hx + 6, ny + 2, nose)
+	# Tiny mouth
+	_px(img, hx + 5, ny + 3, _md(0.4, 0.35, 0.3))
+
+	# ── Cheek blush ──
+	_px(img, hx + 3, ny + 1, _md(1.0, 0.7, 0.68))
+	_px(img, hx + 4, ny + 1, _md(1.0, 0.7, 0.68))
+
+	# ═══ LEGS ═══
+	var ly := 27 + dy_legs
 	if leg_frame == 0:
-		# Frame 1: standing / walking
-		_px_rect(img, 8, 26, 9, 34, legs)
-		_px_rect(img, 13, 26, 14, 34, legs)
-		_px_rect(img, 18, 26, 19, 33, legs)
-		_px_rect(img, 22, 24, 23, 33, legs)
-		# Shadow side
-		_px_rect(img, 9, 28, 9, 34, legs_dark)
-		_px_rect(img, 14, 28, 14, 34, legs_dark)
-		_px_rect(img, 19, 28, 19, 33, legs_dark)
-		_px_rect(img, 23, 26, 23, 33, legs_dark)
-		# Hooves
-		_px_rect(img, 8, 34, 10, 35, hooves)
-		_px_rect(img, 13, 34, 15, 35, hooves)
-		_px_rect(img, 18, 33, 20, 34, hooves)
-		_px_rect(img, 22, 33, 24, 34, hooves)
+		_px_rect(img, 10, ly, 11, ly + 8, legs)
+		_px_rect(img, 15, ly, 16, ly + 8, legs)
+		_px_rect(img, 20, ly, 21, ly + 7, legs)
+		_px_rect(img, 24, ly - 2, 25, ly + 7, legs)
+		_px_rect(img, 11, ly + 2, 11, ly + 8, legs_dark)
+		_px_rect(img, 16, ly + 2, 16, ly + 8, legs_dark)
+		_px_rect(img, 21, ly + 2, 21, ly + 7, legs_dark)
+		_px_rect(img, 25, ly, 25, ly + 7, legs_dark)
+		_px_rect(img, 10, ly + 8, 12, ly + 9, hooves)
+		_px_rect(img, 15, ly + 8, 17, ly + 9, hooves)
+		_px_rect(img, 20, ly + 7, 22, ly + 8, hooves)
+		_px_rect(img, 24, ly + 7, 26, ly + 8, hooves)
 	else:
-		# Frame 2: trotting — legs spread
-		_px_rect(img, 7, 26, 8, 33, legs)
-		_px_rect(img, 14, 26, 15, 35, legs)
-		_px_rect(img, 17, 26, 18, 32, legs)
-		_px_rect(img, 23, 24, 24, 35, legs)
-		_px_rect(img, 8, 28, 8, 33, legs_dark)
-		_px_rect(img, 15, 28, 15, 35, legs_dark)
-		_px_rect(img, 18, 28, 18, 32, legs_dark)
-		_px_rect(img, 24, 26, 24, 35, legs_dark)
-		_px_rect(img, 7, 33, 9, 34, hooves)
-		_px_rect(img, 14, 35, 16, 36, hooves)
-		_px_rect(img, 17, 32, 19, 33, hooves)
-		_px_rect(img, 23, 35, 25, 36, hooves)
+		_px_rect(img, 9, ly, 10, ly + 7, legs)
+		_px_rect(img, 16, ly, 17, ly + 9, legs)
+		_px_rect(img, 19, ly, 20, ly + 6, legs)
+		_px_rect(img, 25, ly - 2, 26, ly + 9, legs)
+		_px_rect(img, 10, ly + 2, 10, ly + 7, legs_dark)
+		_px_rect(img, 17, ly + 2, 17, ly + 9, legs_dark)
+		_px_rect(img, 20, ly + 2, 20, ly + 6, legs_dark)
+		_px_rect(img, 26, ly, 26, ly + 9, legs_dark)
+		_px_rect(img, 9, ly + 7, 11, ly + 8, hooves)
+		_px_rect(img, 16, ly + 9, 18, ly + 10, hooves)
+		_px_rect(img, 19, ly + 6, 21, ly + 7, hooves)
+		_px_rect(img, 25, ly + 9, 27, ly + 10, hooves)
 
-	# ── Tail — woolly puff on the left, slightly wavy ──
-	_px_circle(img, 4, 17, 3, wool)
-	_px_circle(img, 3, 16, 2, wool_light)
-	_px_circle(img, 4, 19, 2, wool_mid)
-	_px(img, 2, 16, wool_light)
+	# ═══ TAIL — woolly puff ═══
+	var ty := 17 + dy_body
+	_px_circle(img, 5, ty, 3, wool)
+	_px_circle(img, 4, ty - 1, 2, wool_light)
+	_px_circle(img, 5, ty + 1, 2, wool_mid)
 
-	# ── Auto-outline — dark ink-like, storybook feel ──
+	# ═══ OUTLINE ═══
 	_auto_outline(img, s, outline)
 
 static func _auto_outline(img: Image, s: int, outline: Color) -> void:
@@ -191,21 +283,16 @@ static func _auto_outline(img: Image, s: int, outline: Color) -> void:
 	for p in edge_pixels:
 		_px(img, p.x, p.y, outline)
 
-static func generate_pixel_sheep() -> ImageTexture:
-	var s := 40
+static func generate_pixel_sheep(leg_frame: int = 0, dir: int = 0) -> ImageTexture:
+	var s := 48
 	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
-	_draw_sheep_body(img, 0)
+	_draw_sheep_body(img, leg_frame, dir)
 	return ImageTexture.create_from_image(img)
 
-# ─── Pixel Sheep Frame 2 (walking stride) ───
-
+# Convenience aliases for backward compatibility
 static func generate_pixel_sheep_frame2() -> ImageTexture:
-	var s := 40
-	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0, 0, 0, 0))
-	_draw_sheep_body(img, 1)
-	return ImageTexture.create_from_image(img)
+	return generate_pixel_sheep(1, 0)
 
 # ─── Meteors (variable size) ───
 
