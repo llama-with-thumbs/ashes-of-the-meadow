@@ -1,4 +1,4 @@
-[gd_scene load_steps=26 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=28 format=3 uid="uid://main_scene"]
 
 [ext_resource type="Script" path="res://scripts/world/demo_world.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/player/sheep.gd" id="2"]
@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://scripts/ui/compass.gd" id="12"]
 [ext_resource type="Script" path="res://scripts/objects/compass_pickup.gd" id="13"]
 [ext_resource type="Script" path="res://scripts/ui/asteroid_slider.gd" id="14"]
+[ext_resource type="Script" path="res://scripts/objects/arcade_terminal.gd" id="15"]
 
 [sub_resource type="ShaderMaterial" id="starfield_mat"]
 shader = ExtResource("10")
@@ -56,6 +57,12 @@ size = Vector2(35, 15)
 
 [sub_resource type="RectangleShape2D" id="debris_shape_4"]
 size = Vector2(45, 22)
+
+[sub_resource type="CircleShape2D" id="terminal_body"]
+radius = 20.0
+
+[sub_resource type="CircleShape2D" id="terminal_interact"]
+radius = 70.0
 
 [node name="DemoWorld" type="Node2D"]
 script = ExtResource("1")
@@ -417,3 +424,28 @@ offset_right = 250.0
 offset_bottom = 60.0
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="ArcadeTerminal" type="StaticBody2D" parent="."]
+position = Vector2(150, -100)
+script = ExtResource("15")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ArcadeTerminal"]
+shape = SubResource("terminal_body")
+
+[node name="Sprite2D" type="Sprite2D" parent="ArcadeTerminal"]
+scale = Vector2(1.8, 1.8)
+
+[node name="PromptLabel" type="Label" parent="ArcadeTerminal"]
+offset_left = -80.0
+offset_top = 35.0
+offset_right = 80.0
+offset_bottom = 55.0
+horizontal_alignment = 1
+text = "[E] Play MEGA SHEEP"
+modulate = Color(0, 1, 0.8, 1)
+
+[node name="InteractArea" type="Area2D" parent="ArcadeTerminal"]
+collision_mask = 1
+
+[node name="InteractAreaShape" type="CollisionShape2D" parent="ArcadeTerminal/InteractArea"]
+shape = SubResource("terminal_interact")

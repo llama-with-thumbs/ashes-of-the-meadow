@@ -4,6 +4,7 @@ extends Node
 ## Attach as a child of the main scene root.
 
 const ProceduralSprites = preload("res://scripts/world/procedural_sprites.gd")
+const RetroSprites = preload("res://scripts/minigame/retro_sprites.gd")
 
 func _ready() -> void:
 	# Wait one frame so all children are ready
@@ -62,6 +63,14 @@ func _assign_textures() -> void:
 		var antenna: Sprite2D = home.get_node_or_null("AntennaVisual")
 		if antenna:
 			antenna.texture = ProceduralSprites.generate_antenna()
+
+	# Arcade terminal
+	var terminal := root.get_node_or_null("ArcadeTerminal")
+	if terminal:
+		var sprite: Sprite2D = terminal.get_node_or_null("Sprite2D")
+		if sprite:
+			sprite.texture = RetroSprites.generate_arcade_terminal()
+			sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 	# Collectibles and debris — iterate all children of root
 	for child in root.get_children():
