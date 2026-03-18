@@ -338,6 +338,178 @@ static func generate_cassette() -> ImageTexture:
 
 	return ImageTexture.create_from_image(img)
 
+# ─── Cartoonishly Large Headphones (64x48) — sits on sheep's ears ───
+
+static func generate_headphones() -> ImageTexture:
+	var w := 64
+	var h := 48
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var cx := w / 2.0
+
+	# ── THICK HEADPHONE BAND — neon hot pink arc ──
+	for i in 64:
+		var t := float(i) / 63.0
+		var bx := 2.0 + t * 60.0
+		var by := 40.0 - sin(t * PI) * 36.0
+		_soft_circle(img, bx, by, 3.0, Color(1.0, 0.1, 0.45), 0.2)
+	# Band highlight — electric gleam
+	for i in 40:
+		var t := float(i) / 39.0
+		var bx := 12.0 + t * 40.0
+		var by := 37.0 - sin(t * PI) * 33.0
+		_soft_circle(img, bx, by, 1.5, Color(1.0, 0.6, 0.75, 0.6), 0.4)
+
+	# ── YOKES — vivid magenta arms ──
+	_soft_ellipse(img, 8, 28, 3.5, 10.0, Color(0.95, 0.05, 0.4))
+	_soft_ellipse(img, 56, 28, 3.5, 10.0, Color(0.95, 0.05, 0.4))
+	# Yoke highlight
+	_soft_ellipse(img, 7, 26, 1.5, 7.0, Color(1.0, 0.5, 0.65, 0.4), 0.4)
+	_soft_ellipse(img, 55, 26, 1.5, 7.0, Color(1.0, 0.5, 0.65, 0.4), 0.4)
+
+	# ── GIANT ORANGE PADS — neon orange, super bright ──
+	# Left pad — outer glow
+	_soft_circle(img, 6, 38, 10.0, Color(1.0, 0.5, 0.0), 0.15)
+	# Left pad — main body
+	_soft_circle(img, 6, 38, 8.0, Color(1.0, 0.6, 0.05), 0.2)
+	# Left pad — hot center
+	_soft_circle(img, 5, 36, 5.0, Color(1.0, 0.85, 0.25, 0.8), 0.3)
+	# Left pad — speaker dot
+	_soft_circle(img, 6, 38, 3.0, Color(0.6, 0.25, 0.0, 0.5), 0.3)
+	# Left pad — white cartoon shine
+	_soft_circle(img, 3, 34, 2.5, Color(1.0, 1.0, 1.0, 0.7), 0.5)
+
+	# Right pad — outer glow
+	_soft_circle(img, 58, 38, 10.0, Color(1.0, 0.5, 0.0), 0.15)
+	# Right pad — main body
+	_soft_circle(img, 58, 38, 8.0, Color(1.0, 0.6, 0.05), 0.2)
+	# Right pad — hot center
+	_soft_circle(img, 59, 36, 5.0, Color(1.0, 0.85, 0.25, 0.8), 0.3)
+	# Right pad — speaker dot
+	_soft_circle(img, 58, 38, 3.0, Color(0.6, 0.25, 0.0, 0.5), 0.3)
+	# Right pad — white cartoon shine
+	_soft_circle(img, 61, 34, 2.5, Color(1.0, 1.0, 1.0, 0.7), 0.5)
+
+	# Big neon glow around pads
+	_soft_circle(img, 6, 38, 14.0, Color(1.0, 0.6, 0.0, 0.1), 0.6)
+	_soft_circle(img, 58, 38, 14.0, Color(1.0, 0.6, 0.0, 0.1), 0.6)
+
+	return ImageTexture.create_from_image(img)
+
+# ─── Cartoonishly Large Walkman (72x64) — clipped to sheep's belt ───
+
+static func generate_walkman_body() -> ImageTexture:
+	var w := 72
+	var h := 64
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var cx := w / 2.0
+
+	var body_top := 3
+	var body_bot := 61
+	var body_left := 4
+	var body_right := 68
+
+	# ── BELT CLIP — little tab sticking up from top ──
+	_rect_rounded(img, 28, 0, 44, 6, Color(0.55, 0.55, 0.58), 1.5)
+	_soft_ellipse(img, 36, 2, 6.0, 1.5, Color(0.7, 0.7, 0.73, 0.4), 0.4)
+
+	# ── WALKMAN BODY — bright candy blue ──
+	var blue := Color(0.35, 0.6, 0.9)
+	_rect_rounded(img, body_left, body_top, body_right, body_bot, blue, 5.0)
+
+	# ── Cartoon outline — dark border ──
+	for x in range(body_left - 1, body_right + 2):
+		for y in range(body_top - 1, body_bot + 2):
+			if x < 0 or y < 0 or x >= w or y >= h:
+				continue
+			var px := img.get_pixel(x, y)
+			if px.a < 0.1:
+				# Check if adjacent to body
+				var near_body := false
+				for dx in range(-1, 2):
+					for dy in range(-1, 2):
+						var nx := x + dx
+						var ny := y + dy
+						if nx >= 0 and ny >= 0 and nx < w and ny < h:
+							if img.get_pixel(nx, ny).a > 0.5:
+								near_body = true
+				if near_body:
+					img.set_pixel(x, y, Color(0.15, 0.25, 0.45, 0.6))
+
+	# ── SILVER TOP — shiny metallic section ──
+	_rect_rounded(img, body_left + 1, body_top + 1, body_right - 1, body_top + 14, Color(0.78, 0.78, 0.82), 4.0)
+	_soft_ellipse(img, cx, body_top + 5, 26.0, 4.0, Color(0.92, 0.92, 0.95, 0.5), 0.4)
+	_soft_line_h(img, body_top + 14, body_left + 2, body_right - 2, Color(0.2, 0.35, 0.55, 0.6), 1.5)
+
+	# ── BIG VOLUME SLIDER — chunky and fun ──
+	var slider_x := body_left + 8
+	_rect_rounded(img, slider_x - 3, body_top + 2, slider_x + 3, body_top + 12, Color(0.12, 0.12, 0.15), 1.5)
+	# Slider knob — bright yellow
+	_rect_rounded(img, slider_x - 3, body_top + 5, slider_x + 3, body_top + 9, Color(1.0, 0.85, 0.2), 1.5)
+	_soft_ellipse(img, slider_x, body_top + 7, 2.0, 1.5, Color(1.0, 1.0, 0.6, 0.5), 0.3)
+
+	# ── BIG PLAY BUTTON — bright green triangle ──
+	var mid_y := (body_top + 15 + body_bot) / 2.0 - 6
+	for y_off in range(-7, 8):
+		var arrow_w := int(7 - absi(y_off) * 0.8)
+		if arrow_w > 0:
+			_soft_line_h(img, int(mid_y + y_off), int(cx - 8), int(cx - 8 + arrow_w * 2), Color(0.2, 0.85, 0.3, 0.8), 1.5)
+	# Play button highlight
+	_soft_circle(img, cx - 3, mid_y - 2, 3.0, Color(0.5, 1.0, 0.6, 0.3), 0.4)
+
+	# ── TAPE WINDOW — big dark rectangle with chunky reels ──
+	var win_left := 18
+	var win_right := 60
+	var win_top := 32
+	var win_bot := 50
+	_rect_rounded(img, win_left, win_top, win_right, win_bot, Color(0.06, 0.06, 0.1), 3.0)
+	# Window border — bright
+	_soft_line_h(img, win_top, win_left, win_right, Color(0.4, 0.5, 0.7, 0.4), 1.5)
+	_soft_line_h(img, win_bot, win_left, win_right, Color(0.4, 0.5, 0.7, 0.4), 1.5)
+
+	# Big chunky reels
+	var reel_y := (win_top + win_bot) / 2.0
+	_soft_circle(img, 30, reel_y, 6.5, Color(0.25, 0.2, 0.18))
+	_soft_circle(img, 48, reel_y, 6.5, Color(0.25, 0.2, 0.18))
+	# Reel hubs — bright copper
+	_soft_circle(img, 30, reel_y, 3.5, Color(0.7, 0.5, 0.25))
+	_soft_circle(img, 48, reel_y, 3.5, Color(0.7, 0.5, 0.25))
+	# Hub centers
+	_soft_circle(img, 30, reel_y, 1.5, Color(0.15, 0.12, 0.1))
+	_soft_circle(img, 48, reel_y, 1.5, Color(0.15, 0.12, 0.1))
+	# Tape strip
+	_soft_line_h(img, int(reel_y - 4), 34, 44, Color(0.4, 0.28, 0.18, 0.6), 1.5)
+	# Reel shine
+	_soft_circle(img, 28, reel_y - 2, 2.0, Color(0.5, 0.4, 0.3, 0.3), 0.4)
+	_soft_circle(img, 46, reel_y - 2, 2.0, Color(0.5, 0.4, 0.3, 0.3), 0.4)
+
+	# ── JACK PORTS — bright colored dots ──
+	_soft_circle(img, body_left + 4, 30, 2.5, Color(0.2, 0.8, 0.3))  # green
+	_soft_circle(img, body_left + 4, 36, 2.5, Color(0.9, 0.2, 0.25))  # red
+
+	# ── BODY SHADING — cartoon gradient ──
+	for x in range(body_left + 1, body_right):
+		for y in range(body_top + 15, body_bot):
+			var px := img.get_pixel(x, y)
+			if px.a > 0.3:
+				var grad := (float(y - body_top) / float(body_bot - body_top)) * 0.1
+				img.set_pixel(x, y, Color(
+					clampf(px.r - grad, 0, 1),
+					clampf(px.g - grad, 0, 1),
+					clampf(px.b - grad, 0, 1),
+					px.a
+				))
+
+	# ── BUTTON — bright red circle ──
+	_soft_circle(img, 56, body_top + 7, 3.0, Color(0.9, 0.2, 0.2))
+	_soft_circle(img, 55, body_top + 6, 1.5, Color(1.0, 0.5, 0.5, 0.4), 0.4)
+
+	# ── Cartoon shine on body — big white gleam ──
+	_soft_ellipse(img, cx + 8, body_top + 20, 4.0, 8.0, Color(1.0, 1.0, 1.0, 0.12), 0.5)
+
+	return ImageTexture.create_from_image(img)
+
 # ─── Collectibles (32x32) ───
 
 static func generate_collectible(type: String) -> ImageTexture:

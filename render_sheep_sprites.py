@@ -40,28 +40,28 @@ def make_mat(mat_name, color, roughness=0.6, metallic=0.0, subsurface=0.0):
     ls.new(b.outputs['BSDF'], o.inputs['Surface'])
     return m
 
-# --- Whimsical cartoon colors (NO grey!) ---
+# --- Saturated whimsical colors — darker small details ---
 
-# Wool/body — soft lavender-pink (fluffy cotton candy)
-mat_wool = make_mat("SheepWool", (0.85, 0.65, 0.90, 1.0), roughness=0.7, subsurface=0.2)
+# Wool/body — rich saturated lavender-pink
+mat_wool = make_mat("SheepWool", (0.92, 0.55, 1.0, 1.0), roughness=0.7, subsurface=0.2)
 
-# Face/head — warm peachy-orange (cute cartoon face)
-mat_face = make_mat("SheepFace", (1.0, 0.6, 0.4, 1.0), roughness=0.5, subsurface=0.15)
+# Face/head — deep warm tangerine
+mat_face = make_mat("SheepFace", (1.0, 0.5, 0.2, 1.0), roughness=0.45, subsurface=0.15)
 
-# Ears — bright coral pink
-mat_ears = make_mat("SheepEars", (1.0, 0.45, 0.55, 1.0), roughness=0.5, subsurface=0.1)
+# Ears — deep hot pink (darker detail)
+mat_ears = make_mat("SheepEars", (0.85, 0.15, 0.35, 1.0), roughness=0.45, subsurface=0.1)
 
-# Eyes — big bright sky blue
-mat_eyes = make_mat("SheepEyes", (0.4, 0.75, 1.0, 1.0), roughness=0.15)
+# Eyes — deep indigo blue (darker detail)
+mat_eyes = make_mat("SheepEyes", (0.15, 0.25, 0.7, 1.0), roughness=0.15)
 
-# Glasses — candy purple, shiny
-mat_glasses = make_mat("SheepGlasses", (0.55, 0.2, 0.85, 1.0), roughness=0.15, metallic=0.7)
+# Glasses — dark rich purple, shiny (darker detail)
+mat_glasses = make_mat("SheepGlasses", (0.3, 0.05, 0.55, 1.0), roughness=0.1, metallic=0.8)
 
-# Legs/bottom/cloth — mint green
-mat_legs = make_mat("SheepLegs", (0.4, 0.9, 0.7, 1.0), roughness=0.5)
+# Legs/bottom/cloth — vivid emerald green
+mat_legs = make_mat("SheepLegs", (0.15, 0.85, 0.5, 1.0), roughness=0.45)
 
-# Horns/curves — warm sunshine yellow
-mat_horns = make_mat("SheepHorns", (1.0, 0.85, 0.3, 1.0), roughness=0.4)
+# Horns/curves — rich golden amber
+mat_horns = make_mat("SheepHorns", (1.0, 0.75, 0.1, 1.0), roughness=0.35)
 
 # --- Assign materials by part name ---
 glasses_parts = {'Glasses', 'Glasses.001', 'Glasses.002', 'Glasses.003'}

@@ -36,6 +36,12 @@ func _assign_textures() -> void:
 		var cassette: Sprite2D = sheep.get_node_or_null("CassetteSprite")
 		if cassette:
 			cassette.texture = ProceduralSprites.generate_cassette()
+		var headphones: Sprite2D = sheep.get_node_or_null("HeadphonesSprite")
+		if headphones:
+			headphones.texture = ProceduralSprites.generate_headphones()
+		var walkman: Sprite2D = sheep.get_node_or_null("WalkmanSprite")
+		if walkman:
+			walkman.texture = ProceduralSprites.generate_walkman_body()
 
 	# Cassette pickup
 	var cassette_pickup := root.get_node_or_null("CassettePickup")

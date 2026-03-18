@@ -43,6 +43,8 @@ var _ambient_from_file: bool = false
 @onready var particles: GPUParticles2D = $NoteParticles
 @onready var interact_area: Area2D = $InteractArea
 @onready var cassette_sprite: Sprite2D = $CassetteSprite
+@onready var headphones_sprite: Sprite2D = $HeadphonesSprite
+@onready var walkman_sprite: Sprite2D = $WalkmanSprite
 @onready var charge_bar: ProgressBar = $ChargeBar
 
 # Audio
@@ -55,6 +57,8 @@ signal pulse_fired(strength: float, direction: Vector2)
 func _ready() -> void:
 	original_modulate = sprite.modulate
 	cassette_sprite.visible = false
+	headphones_sprite.visible = false
+	walkman_sprite.visible = false
 	charge_bar.visible = false
 	charge_bar.max_value = max_charge
 	if particles:
@@ -81,7 +85,9 @@ func receive_cassette() -> void:
 	## Cassette picked up — full sound-powered movement
 	has_cassette = true
 	GameState.has_cassette_bass = true
-	cassette_sprite.visible = true
+	cassette_sprite.visible = false  # Old combined sprite hidden
+	headphones_sprite.visible = true
+	walkman_sprite.visible = true
 	charge_bar.visible = true
 	# Start cassette audio
 	if not _bass_from_file:
