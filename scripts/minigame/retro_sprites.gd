@@ -27,158 +27,184 @@ static func _px_circle(img: Image, cx: int, cy: int, r: int, col: Color) -> void
 			if (x - cx) * (x - cx) + (y - cy) * (y - cy) <= r * r:
 				_px(img, x, y, col)
 
-# ─── Pixel Sheep (24x24) — side-facing, clearly a sheep ───
+# ─── Pixel Sheep (40x40) — Children's book lamb ───
+# Wavy woolly edges, small curved horns, floppy ear, round spiral eyes,
+# thin stick legs — like a classic storybook illustration.
+
+static func _draw_sheep_body(img: Image, leg_frame: int) -> void:
+	var s := 40
+
+	# Storybook palette — bright white wool, dark outlines, warm accents
+	var wool := _md(0.95, 0.92, 0.88)          # Off-white wool
+	var wool_light := _md(1.0, 1.0, 0.98)      # Bright highlight
+	var wool_mid := _md(0.88, 0.84, 0.78)      # Mid tone
+	var wool_shadow := _md(0.78, 0.72, 0.65)   # Shadow
+	var face := _md(0.95, 0.88, 0.82)          # Warm cream face
+	var face_light := _md(1.0, 0.95, 0.9)      # Highlight
+	var eye := _md(0.12, 0.1, 0.12)            # Dark — simple dots
+	var eye_shine := _md(1.0, 1.0, 1.0)        # Sparkle
+	var nose := _md(0.3, 0.25, 0.22)           # Dark nose
+	var ear_dark := _md(0.3, 0.28, 0.25)       # Dark floppy ear
+	var ear_inner := _md(0.55, 0.45, 0.4)      # Inner ear
+	var horn := _md(0.3, 0.28, 0.25)           # Dark curved horns
+	var legs := _md(0.82, 0.75, 0.65)          # Warm legs
+	var legs_dark := _md(0.65, 0.55, 0.45)     # Leg shadow
+	var hooves := _md(0.45, 0.35, 0.28)        # Hooves
+	var outline := _md(0.2, 0.18, 0.15)        # Dark outline (storybook ink)
+
+	# ── Woolly body — wavy bumpy edges like the reference ──
+	# Main body mass (slightly wider, left of center for head room)
+	_px_circle(img, 14, 18, 10, wool)
+	_px_circle(img, 11, 16, 8, wool)
+	_px_circle(img, 18, 16, 8, wool)
+	_px_circle(img, 14, 14, 7, wool)
+
+	# Wavy top edge — bumpy cloud-like silhouette
+	_px_circle(img, 8, 11, 4, wool)
+	_px_circle(img, 13, 9, 4, wool)
+	_px_circle(img, 18, 10, 4, wool)
+	_px_circle(img, 22, 12, 3, wool)
+	_px_circle(img, 10, 9, 3, wool)
+	_px_circle(img, 16, 8, 3, wool)
+
+	# Wavy side edges
+	_px_circle(img, 5, 15, 4, wool)
+	_px_circle(img, 5, 19, 3, wool)
+	_px_circle(img, 23, 15, 4, wool)
+	_px_circle(img, 24, 19, 3, wool)
+
+	# Wavy bottom edge
+	_px_circle(img, 8, 24, 3, wool)
+	_px_circle(img, 13, 25, 3, wool)
+	_px_circle(img, 18, 24, 3, wool)
+	_px_circle(img, 22, 23, 3, wool)
+
+	# ── Wool shading — top-left highlight, bottom shadow ──
+	_px_circle(img, 10, 11, 3, wool_light)
+	_px_circle(img, 14, 9, 2, wool_light)
+	_px_circle(img, 7, 15, 3, wool_light)
+	_px_circle(img, 17, 19, 4, wool_mid)
+	_px_circle(img, 20, 22, 3, wool_shadow)
+	_px_circle(img, 14, 24, 3, wool_shadow)
+	# Fluff detail dots
+	_px(img, 9, 10, wool_light); _px(img, 15, 8, wool_light)
+	_px(img, 6, 14, wool_light); _px(img, 20, 11, wool_mid)
+	_px(img, 12, 22, wool_mid); _px(img, 21, 17, wool_shadow)
+
+	# ── Head/face — right side, round ──
+	_px_circle(img, 30, 15, 7, face)
+	_px_circle(img, 31, 14, 6, face)
+	_px_circle(img, 29, 13, 4, face_light)
+
+	# Wool overlapping onto head
+	_px_circle(img, 25, 13, 4, wool)
+	_px_circle(img, 25, 17, 3, wool)
+	_px_circle(img, 26, 10, 3, wool)
+
+	# ── Curved horns — small, dark, curving outward ──
+	# Right horn (C-curve going up-right)
+	_px(img, 29, 7, horn); _px(img, 30, 6, horn); _px(img, 31, 5, horn)
+	_px(img, 32, 5, horn); _px(img, 33, 6, horn); _px(img, 33, 7, horn)
+	# Left horn (peeking behind, shorter)
+	_px(img, 27, 7, horn); _px(img, 26, 6, horn); _px(img, 25, 6, horn)
+	_px(img, 25, 7, horn)
+
+	# ── Floppy ear — dark, drooping to the left ──
+	_px_rect(img, 26, 13, 27, 19, ear_dark)
+	_px(img, 25, 14, ear_dark); _px(img, 25, 15, ear_dark)
+	_px(img, 25, 16, ear_dark); _px(img, 25, 17, ear_dark)
+	_px(img, 28, 14, ear_dark); _px(img, 28, 15, ear_dark)
+	# Ear inner detail
+	_px(img, 27, 15, ear_inner); _px(img, 27, 16, ear_inner)
+	_px(img, 26, 16, ear_inner)
+
+	# ── Eyes — round, with spiral hint (like the reference) ──
+	# Main eye
+	_px(img, 32, 12, eye); _px(img, 33, 12, eye)
+	_px(img, 32, 13, eye); _px(img, 33, 13, eye)
+	_px(img, 34, 12, eye); _px(img, 34, 13, eye)
+	# Spiral hint (small inner mark)
+	_px(img, 33, 12, eye_shine)
+	_px(img, 32, 13, _md(0.25, 0.22, 0.2))
+
+	# ── Snout/nose — small, dark ──
+	_px_circle(img, 36, 16, 2, face)
+	_px(img, 37, 16, nose); _px(img, 37, 15, nose)
+	# Little mouth line
+	_px(img, 36, 18, nose); _px(img, 35, 19, _md(0.4, 0.35, 0.3))
+
+	# ── Legs — thin stick legs, like the illustration ──
+	if leg_frame == 0:
+		# Frame 1: standing / walking
+		_px_rect(img, 8, 26, 9, 34, legs)
+		_px_rect(img, 13, 26, 14, 34, legs)
+		_px_rect(img, 18, 26, 19, 33, legs)
+		_px_rect(img, 22, 24, 23, 33, legs)
+		# Shadow side
+		_px_rect(img, 9, 28, 9, 34, legs_dark)
+		_px_rect(img, 14, 28, 14, 34, legs_dark)
+		_px_rect(img, 19, 28, 19, 33, legs_dark)
+		_px_rect(img, 23, 26, 23, 33, legs_dark)
+		# Hooves
+		_px_rect(img, 8, 34, 10, 35, hooves)
+		_px_rect(img, 13, 34, 15, 35, hooves)
+		_px_rect(img, 18, 33, 20, 34, hooves)
+		_px_rect(img, 22, 33, 24, 34, hooves)
+	else:
+		# Frame 2: trotting — legs spread
+		_px_rect(img, 7, 26, 8, 33, legs)
+		_px_rect(img, 14, 26, 15, 35, legs)
+		_px_rect(img, 17, 26, 18, 32, legs)
+		_px_rect(img, 23, 24, 24, 35, legs)
+		_px_rect(img, 8, 28, 8, 33, legs_dark)
+		_px_rect(img, 15, 28, 15, 35, legs_dark)
+		_px_rect(img, 18, 28, 18, 32, legs_dark)
+		_px_rect(img, 24, 26, 24, 35, legs_dark)
+		_px_rect(img, 7, 33, 9, 34, hooves)
+		_px_rect(img, 14, 35, 16, 36, hooves)
+		_px_rect(img, 17, 32, 19, 33, hooves)
+		_px_rect(img, 23, 35, 25, 36, hooves)
+
+	# ── Tail — woolly puff on the left, slightly wavy ──
+	_px_circle(img, 4, 17, 3, wool)
+	_px_circle(img, 3, 16, 2, wool_light)
+	_px_circle(img, 4, 19, 2, wool_mid)
+	_px(img, 2, 16, wool_light)
+
+	# ── Auto-outline — dark ink-like, storybook feel ──
+	_auto_outline(img, s, outline)
+
+static func _auto_outline(img: Image, s: int, outline: Color) -> void:
+	var edge_pixels: Array = []
+	for x in range(s):
+		for y in range(s):
+			if img.get_pixel(x, y).a > 0.5:
+				for dx in [-1, 0, 1]:
+					for dy in [-1, 0, 1]:
+						if dx == 0 and dy == 0:
+							continue
+						var nx: int = x + dx
+						var ny: int = y + dy
+						if nx >= 0 and ny >= 0 and nx < s and ny < s:
+							if img.get_pixel(nx, ny).a < 0.1:
+								edge_pixels.append(Vector2i(nx, ny))
+	for p in edge_pixels:
+		_px(img, p.x, p.y, outline)
 
 static func generate_pixel_sheep() -> ImageTexture:
-	var s := 24
+	var s := 40
 	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
-
-	var wool := _md(0.9, 0.6, 1.0)         # Lavender wool
-	var wool_light := _md(1.0, 0.8, 1.0)    # Highlight
-	var wool_dark := _md(0.7, 0.4, 0.8)     # Shadow
-	var face := _md(1.0, 0.5, 0.3)          # Tangerine face
-	var face_dark := _md(0.7, 0.3, 0.15)    # Face shadow
-	var eye := _md(0.1, 0.15, 0.6)          # Deep indigo eye
-	var eye_white := _md(1.0, 1.0, 1.0)
-	var ear := _md(0.85, 0.15, 0.4)         # Hot pink ear
-	var legs := _md(0.15, 0.85, 0.5)        # Emerald legs
-	var outline := _md(0.15, 0.1, 0.2)      # Dark outline
-
-	# Wool body — big fluffy mass (main shape)
-	_px_rect(img, 5, 8, 18, 16, wool)
-	_px_rect(img, 6, 7, 17, 17, wool)
-	_px_rect(img, 7, 6, 16, 18, wool)
-	# Wool puffs — bumpy top edge
-	_px_rect(img, 7, 5, 9, 6, wool)
-	_px_rect(img, 11, 5, 13, 6, wool)
-	_px_rect(img, 15, 5, 17, 6, wool)
-	# Wool puffs — bumpy bottom
-	_px_rect(img, 8, 18, 10, 19, wool)
-	_px_rect(img, 13, 18, 15, 19, wool)
-
-	# Wool highlight (top-left)
-	_px_rect(img, 7, 7, 10, 9, wool_light)
-	_px_rect(img, 8, 6, 9, 7, wool_light)
-	# Wool shadow (bottom-right)
-	_px_rect(img, 14, 15, 17, 17, wool_dark)
-	_px_rect(img, 16, 13, 18, 16, wool_dark)
-
-	# Head/face — poking out right side
-	_px_rect(img, 18, 8, 22, 14, face)
-	_px_rect(img, 19, 7, 21, 15, face)
-	# Face shadow
-	_px_rect(img, 19, 13, 22, 14, face_dark)
-
-	# Eye
-	_px(img, 20, 9, eye_white)
-	_px(img, 21, 9, eye_white)
-	_px(img, 21, 10, eye)
-	_px(img, 20, 10, eye)
-
-	# Ear — sticking up from head
-	_px_rect(img, 20, 5, 21, 7, ear)
-	_px(img, 20, 4, ear)
-
-	# Tiny nose/mouth
-	_px(img, 22, 12, face_dark)
-	_px(img, 22, 11, face_dark)
-
-	# Legs — two pairs
-	_px_rect(img, 8, 19, 9, 22, legs)
-	_px_rect(img, 14, 19, 15, 22, legs)
-	# Hooves
-	_px(img, 8, 22, outline)
-	_px(img, 9, 22, outline)
-	_px(img, 14, 22, outline)
-	_px(img, 15, 22, outline)
-
-	# Outline — bottom of body and head
-	for x in range(5, 23):
-		for y in range(3, 23):
-			var c := img.get_pixel(x, y)
-			if c.a > 0.5:
-				# Check if edge pixel
-				for dx in [-1, 0, 1]:
-					for dy in [-1, 0, 1]:
-						if dx == 0 and dy == 0:
-							continue
-						var nx: int = x + dx
-						var ny: int = y + dy
-						if nx >= 0 and ny >= 0 and nx < s and ny < s:
-							if img.get_pixel(nx, ny).a < 0.1:
-								_px(img, nx, ny, outline)
-
+	_draw_sheep_body(img, 0)
 	return ImageTexture.create_from_image(img)
 
-# ─── Pixel Sheep Frame 2 (legs shifted) ───
+# ─── Pixel Sheep Frame 2 (walking stride) ───
 
 static func generate_pixel_sheep_frame2() -> ImageTexture:
-	var s := 24
+	var s := 40
 	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
-
-	var wool := _md(0.9, 0.6, 1.0)
-	var wool_light := _md(1.0, 0.8, 1.0)
-	var wool_dark := _md(0.7, 0.4, 0.8)
-	var face := _md(1.0, 0.5, 0.3)
-	var face_dark := _md(0.7, 0.3, 0.15)
-	var eye := _md(0.1, 0.15, 0.6)
-	var eye_white := _md(1.0, 1.0, 1.0)
-	var ear := _md(0.85, 0.15, 0.4)
-	var legs := _md(0.15, 0.85, 0.5)
-	var outline := _md(0.15, 0.1, 0.2)
-
-	# Same body as frame 1
-	_px_rect(img, 5, 8, 18, 16, wool)
-	_px_rect(img, 6, 7, 17, 17, wool)
-	_px_rect(img, 7, 6, 16, 18, wool)
-	_px_rect(img, 7, 5, 9, 6, wool)
-	_px_rect(img, 11, 5, 13, 6, wool)
-	_px_rect(img, 15, 5, 17, 6, wool)
-	_px_rect(img, 8, 18, 10, 19, wool)
-	_px_rect(img, 13, 18, 15, 19, wool)
-	_px_rect(img, 7, 7, 10, 9, wool_light)
-	_px_rect(img, 8, 6, 9, 7, wool_light)
-	_px_rect(img, 14, 15, 17, 17, wool_dark)
-	_px_rect(img, 16, 13, 18, 16, wool_dark)
-	_px_rect(img, 18, 8, 22, 14, face)
-	_px_rect(img, 19, 7, 21, 15, face)
-	_px_rect(img, 19, 13, 22, 14, face_dark)
-	_px(img, 20, 9, eye_white)
-	_px(img, 21, 9, eye_white)
-	_px(img, 21, 10, eye)
-	_px(img, 20, 10, eye)
-	_px_rect(img, 20, 5, 21, 7, ear)
-	_px(img, 20, 4, ear)
-	_px(img, 22, 12, face_dark)
-	_px(img, 22, 11, face_dark)
-
-	# Legs — shifted positions for run cycle
-	_px_rect(img, 7, 19, 8, 22, legs)
-	_px_rect(img, 10, 19, 11, 21, legs)
-	_px_rect(img, 13, 19, 14, 21, legs)
-	_px_rect(img, 16, 19, 17, 22, legs)
-	_px(img, 7, 22, outline)
-	_px(img, 8, 22, outline)
-	_px(img, 16, 22, outline)
-	_px(img, 17, 22, outline)
-
-	# Outline
-	for x in range(5, 23):
-		for y in range(3, 23):
-			var c := img.get_pixel(x, y)
-			if c.a > 0.5:
-				for dx in [-1, 0, 1]:
-					for dy in [-1, 0, 1]:
-						if dx == 0 and dy == 0:
-							continue
-						var nx: int = x + dx
-						var ny: int = y + dy
-						if nx >= 0 and ny >= 0 and nx < s and ny < s:
-							if img.get_pixel(nx, ny).a < 0.1:
-								_px(img, nx, ny, outline)
-
+	_draw_sheep_body(img, 1)
 	return ImageTexture.create_from_image(img)
 
 # ─── Meteors (variable size) ───
@@ -337,6 +363,247 @@ static func _draw_music_note_mini(img: Image) -> void:
 	_px(img, 7, 2, gold)
 	_px(img, 8, 3, gold)
 	_px(img, 8, 4, gold)
+
+# ─── Golden Star (The Little Prince) — 12x12 ───
+
+static func generate_golden_star() -> ImageTexture:
+	var s := 12
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var gold := _md(1.0, 0.85, 0.15)
+	var gold_light := _md(1.0, 1.0, 0.5)
+	var gold_dark := _md(0.8, 0.6, 0.05)
+	var glow := _md(1.0, 0.95, 0.7)
+	# Five-pointed star shape
+	# Top point
+	_px(img, 5, 0, gold_light); _px(img, 6, 0, gold_light)
+	_px(img, 5, 1, gold); _px(img, 6, 1, gold)
+	# Upper body
+	_px_rect(img, 4, 2, 7, 3, gold)
+	_px_rect(img, 3, 3, 8, 4, gold)
+	# Arms
+	_px(img, 0, 4, gold); _px(img, 1, 4, gold); _px(img, 2, 4, gold)
+	_px_rect(img, 3, 4, 8, 5, gold)
+	_px(img, 9, 4, gold); _px(img, 10, 4, gold); _px(img, 11, 4, gold)
+	# Mid body
+	_px_rect(img, 3, 5, 8, 6, gold)
+	# Lower spread
+	_px_rect(img, 2, 7, 9, 7, gold)
+	_px(img, 1, 8, gold); _px(img, 2, 8, gold)
+	_px(img, 9, 8, gold); _px(img, 10, 8, gold)
+	# Bottom points (two feet)
+	_px(img, 1, 9, gold_dark); _px(img, 10, 9, gold_dark)
+	# Central highlight
+	_px(img, 5, 3, gold_light); _px(img, 6, 3, gold_light)
+	_px(img, 5, 4, gold_light); _px(img, 6, 4, gold_light)
+	# Warm glow center
+	_px(img, 5, 5, glow); _px(img, 6, 5, glow)
+	# Shadow on lower half
+	_px_rect(img, 4, 6, 7, 7, gold_dark)
+	return ImageTexture.create_from_image(img)
+
+# ─── Shield Power-Up Icon (10x10) ───
+
+static func generate_shield_icon() -> ImageTexture:
+	var s := 10
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var cyan := _md(0.2, 0.9, 1.0)
+	var cyan_light := _md(0.6, 1.0, 1.0)
+	var cyan_dark := _md(0.1, 0.5, 0.7)
+	# Shield shape
+	_px_rect(img, 2, 1, 7, 2, cyan)
+	_px_rect(img, 1, 2, 8, 5, cyan)
+	_px_rect(img, 2, 5, 7, 7, cyan)
+	_px_rect(img, 3, 7, 6, 8, cyan)
+	_px(img, 4, 9, cyan); _px(img, 5, 9, cyan)
+	# Highlight
+	_px_rect(img, 3, 2, 4, 4, cyan_light)
+	# Shadow
+	_px_rect(img, 6, 5, 7, 7, cyan_dark)
+	return ImageTexture.create_from_image(img)
+
+# ─── Magnet Power-Up Icon (10x10) ───
+
+static func generate_magnet_icon() -> ImageTexture:
+	var s := 10
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var red := _md(1.0, 0.2, 0.2)
+	var blue := _md(0.2, 0.3, 1.0)
+	var metal := _md(0.75, 0.75, 0.8)
+	# U-shape magnet
+	_px_rect(img, 1, 1, 2, 6, red)
+	_px_rect(img, 7, 1, 8, 6, blue)
+	_px_rect(img, 2, 6, 7, 7, metal)
+	_px_rect(img, 3, 7, 6, 8, metal)
+	# Tips
+	_px_rect(img, 1, 1, 2, 2, _md(1.0, 0.5, 0.5))
+	_px_rect(img, 7, 1, 8, 2, _md(0.5, 0.5, 1.0))
+	return ImageTexture.create_from_image(img)
+
+# ─── The Rose (The Little Prince) — 14x16 with glass dome ───
+
+static func generate_rose() -> ImageTexture:
+	var img := Image.create(14, 16, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var red := _md(1.0, 0.15, 0.25)
+	var red_light := _md(1.0, 0.4, 0.45)
+	var red_dark := _md(0.7, 0.05, 0.15)
+	var stem := _md(0.15, 0.7, 0.25)
+	var stem_dark := _md(0.1, 0.5, 0.15)
+	var leaf := _md(0.2, 0.8, 0.3)
+	var glass := _md(0.7, 0.85, 1.0)
+	var glass_dim := _md(0.4, 0.55, 0.7)
+	# Glass dome
+	_px(img, 5, 1, glass); _px(img, 6, 1, glass); _px(img, 7, 1, glass); _px(img, 8, 1, glass)
+	_px(img, 4, 2, glass); _px(img, 9, 2, glass)
+	_px(img, 3, 3, glass); _px(img, 10, 3, glass)
+	_px(img, 3, 4, glass_dim); _px(img, 10, 4, glass_dim)
+	_px(img, 3, 5, glass_dim); _px(img, 10, 5, glass_dim)
+	_px(img, 3, 6, glass_dim); _px(img, 10, 6, glass_dim)
+	_px(img, 3, 7, glass_dim); _px(img, 10, 7, glass_dim)
+	_px(img, 3, 8, glass_dim); _px(img, 10, 8, glass_dim)
+	_px(img, 3, 9, glass_dim); _px(img, 10, 9, glass_dim)
+	# Dome highlight
+	_px(img, 4, 2, Color(1, 1, 1, 0.5)); _px(img, 5, 2, Color(1, 1, 1, 0.3))
+	# Rose petals (inside dome)
+	_px_rect(img, 5, 3, 8, 4, red)
+	_px_rect(img, 5, 5, 8, 6, red)
+	_px(img, 6, 2, red_light); _px(img, 7, 2, red_light)
+	_px(img, 5, 4, red_light); _px(img, 8, 3, red_dark)
+	_px(img, 6, 6, red_dark); _px(img, 7, 6, red_dark)
+	# Stem
+	_px(img, 6, 7, stem); _px(img, 7, 7, stem)
+	_px(img, 6, 8, stem); _px(img, 7, 8, stem)
+	_px(img, 6, 9, stem_dark); _px(img, 7, 9, stem_dark)
+	# Leaves
+	_px(img, 5, 8, leaf); _px(img, 8, 7, leaf)
+	# Base plate
+	_px_rect(img, 2, 10, 11, 11, glass_dim)
+	_px_rect(img, 3, 10, 10, 10, glass)
+	return ImageTexture.create_from_image(img)
+
+# ─── The Fox (The Little Prince) — 16x12 ───
+
+static func generate_fox() -> ImageTexture:
+	var img := Image.create(16, 12, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var orange := _md(1.0, 0.6, 0.15)
+	var orange_light := _md(1.0, 0.75, 0.35)
+	var orange_dark := _md(0.75, 0.4, 0.05)
+	var white := _md(1.0, 0.95, 0.9)
+	var eye := _md(0.1, 0.1, 0.12)
+	var nose := _md(0.15, 0.12, 0.1)
+	var ear_inner := _md(1.0, 0.5, 0.4)
+	var outline := _md(0.3, 0.18, 0.08)
+	# Body
+	_px_rect(img, 4, 5, 11, 8, orange)
+	_px_rect(img, 5, 4, 10, 9, orange)
+	# Belly
+	_px_rect(img, 6, 7, 9, 9, white)
+	# Head
+	_px_rect(img, 1, 3, 5, 7, orange)
+	_px_rect(img, 2, 2, 4, 8, orange)
+	# Face highlight
+	_px(img, 2, 4, orange_light); _px(img, 3, 4, orange_light)
+	# Muzzle
+	_px(img, 1, 5, white); _px(img, 1, 6, white); _px(img, 2, 6, white)
+	# Nose
+	_px(img, 0, 5, nose)
+	# Eye
+	_px(img, 2, 3, eye)
+	_px(img, 2, 4, Color(1, 1, 1))  # Shine
+	# Ears (pointed)
+	_px(img, 2, 1, orange); _px(img, 3, 0, orange); _px(img, 4, 1, orange)
+	_px(img, 3, 1, ear_inner)
+	# Tail (big fluffy)
+	_px_rect(img, 12, 4, 14, 7, orange)
+	_px(img, 15, 5, orange_light); _px(img, 15, 6, orange_light)
+	_px(img, 14, 4, orange_light)
+	_px(img, 13, 7, white)  # White tail tip
+	_px(img, 14, 7, white)
+	# Legs
+	_px(img, 5, 9, orange_dark); _px(img, 6, 9, orange_dark)
+	_px(img, 9, 9, orange_dark); _px(img, 10, 9, orange_dark)
+	_px(img, 5, 10, outline); _px(img, 6, 10, outline)
+	_px(img, 9, 10, outline); _px(img, 10, 10, outline)
+	# Shadow
+	_px_rect(img, 8, 8, 11, 8, orange_dark)
+	return ImageTexture.create_from_image(img)
+
+# ─── Tiny Planet B-612 (background) — 20x20 ───
+
+static func generate_tiny_planet() -> ImageTexture:
+	var img := Image.create(20, 20, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var ground := _md(0.45, 0.6, 0.3)
+	var ground_dark := _md(0.3, 0.45, 0.2)
+	var ground_light := _md(0.55, 0.7, 0.4)
+	# Planet sphere
+	_px_circle(img, 10, 12, 7, ground)
+	_px_circle(img, 9, 11, 5, ground_light)
+	_px_circle(img, 11, 14, 4, ground_dark)
+	# Tiny figure (The Prince) standing on top
+	var hair := _md(1.0, 0.85, 0.2)
+	var scarf := _md(1.0, 0.75, 0.1)
+	var coat := _md(0.2, 0.4, 0.8)
+	# Head
+	_px(img, 10, 3, _md(1.0, 0.85, 0.7))
+	_px(img, 10, 2, hair); _px(img, 11, 2, hair); _px(img, 10, 1, hair)
+	# Body
+	_px(img, 10, 4, coat); _px(img, 10, 5, coat)
+	# Scarf flowing
+	_px(img, 11, 3, scarf); _px(img, 12, 3, scarf); _px(img, 13, 2, scarf)
+	# Legs
+	_px(img, 9, 6, coat); _px(img, 11, 6, coat)
+	return ImageTexture.create_from_image(img)
+
+# ─── Baobab Tree — 12x14 ───
+
+static func generate_baobab() -> ImageTexture:
+	var img := Image.create(12, 14, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var trunk := _md(0.5, 0.35, 0.2)
+	var trunk_dark := _md(0.35, 0.22, 0.12)
+	var crown := _md(0.25, 0.55, 0.2)
+	var crown_light := _md(0.35, 0.7, 0.25)
+	var crown_dark := _md(0.15, 0.4, 0.12)
+	# Crown (big round)
+	_px_circle(img, 6, 3, 4, crown)
+	_px_circle(img, 4, 4, 3, crown)
+	_px_circle(img, 8, 4, 3, crown)
+	_px_circle(img, 5, 2, 2, crown_light)
+	_px_circle(img, 7, 5, 2, crown_dark)
+	# Trunk (thick)
+	_px_rect(img, 5, 7, 7, 12, trunk)
+	_px_rect(img, 4, 8, 5, 11, trunk)
+	_px(img, 7, 8, trunk_dark); _px(img, 7, 10, trunk_dark)
+	# Roots
+	_px(img, 3, 12, trunk_dark); _px(img, 4, 13, trunk_dark)
+	_px(img, 8, 12, trunk_dark); _px(img, 9, 13, trunk_dark)
+	return ImageTexture.create_from_image(img)
+
+# ─── Slow-Mo Power-Up Icon (10x10) ───
+
+static func generate_slowmo_icon() -> ImageTexture:
+	var s := 10
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var purple := _md(0.6, 0.3, 1.0)
+	var purple_light := _md(0.8, 0.5, 1.0)
+	var purple_dark := _md(0.35, 0.15, 0.6)
+	# Clock face
+	_px_circle(img, 5, 5, 4, purple)
+	_px_circle(img, 5, 5, 3, purple_dark)
+	_px_circle(img, 5, 5, 2, purple)
+	# Clock hands
+	_px(img, 5, 3, purple_light)  # 12 o'clock
+	_px(img, 5, 4, purple_light)
+	_px(img, 6, 5, purple_light)  # 3 o'clock
+	# Rim highlight
+	_px(img, 4, 1, purple_light); _px(img, 5, 1, purple_light); _px(img, 6, 1, purple_light)
+	return ImageTexture.create_from_image(img)
 
 # ─── Heart (8x8) ───
 

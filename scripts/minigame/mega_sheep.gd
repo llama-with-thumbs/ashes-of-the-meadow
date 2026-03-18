@@ -15,7 +15,7 @@ var state: State = State.TITLE
 
 const W: float = 1280.0
 const H: float = 720.0
-const HUD_H: float = 58.0  # Top panel height
+const HUD_H: float = 64.0  # Top panel height
 
 # ─── Player ───
 
@@ -200,6 +200,46 @@ var _lp_quotes: Array[String] = [
 	"\"One sees clearly only with the heart.\"",
 	"\"If you love a flower on a star, it is sweet at night to look at the sky.\"",
 ]
+
+# ─── Melancholic Atmosphere ───
+
+# Memory fragments — diary entries drifting through space
+var memory_fragments: Array = []  # {pos, vel, text, life, max_life, alpha}
+var memory_timer: float = 0.0
+var _memory_texts: Array[String] = [
+	"I remember green fields...",
+	"The wind used to sing here.",
+	"Was there ever warmth?",
+	"Someone called my name once.",
+	"The meadow is gone.",
+	"I keep drifting... always drifting.",
+	"Stars don't answer when you call.",
+	"Everything I loved is ashes now.",
+	"There was music in the grass.",
+	"I think I had a home.",
+	"The silence is so heavy.",
+	"Do the others remember me?",
+	"Even the echoes are fading.",
+	"One more fragment... one more memory.",
+	"The sky used to be blue.",
+	"I'm still here. I'm still here.",
+]
+
+# Ghost sheep — faint echoes of others who came before
+var ghost_sheep: Array = []  # {pos, vel, alpha, life, max_life, frame}
+var ghost_timer: float = 0.0
+
+# Ambient whisper words — single words that drift by
+var whisper_words: Array = []  # {pos, vel, text, life, max_life}
+var whisper_timer: float = 0.0
+var _whisper_pool: Array[String] = [
+	"home", "lost", "remember", "alone", "echo", "ashes",
+	"meadow", "silence", "drift", "far", "gone", "fading",
+	"once", "warmth", "stars", "dust", "wind", "light",
+]
+
+# Stardust trails from destroyed meteors
+var stardust_points: Array = []  # {pos, life, brightness}
 
 # ─── Particle Color Lookup ───
 
@@ -410,6 +450,13 @@ func _start_game() -> void:
 	sunset_active = false
 	sunset_timer = 0.0
 	sunset_progress = 0.0
+	memory_fragments.clear()
+	memory_timer = 0.0
+	ghost_sheep.clear()
+	ghost_timer = 0.0
+	whisper_words.clear()
+	whisper_timer = 0.0
+	stardust_points.clear()
 
 	title_label.visible = false
 	results_label.visible = false
@@ -770,6 +817,13 @@ func _process(delta: float) -> void:
 				meteors_destroyed += 1
 				_play_sfx2("meteor_shatter")
 				_spawn_popup("+%d" % destroy_score, m.pos + Vector2(0, -20), Color(0.5, 0.9, 1.0))
+				# Leave stardust where the meteor was destroyed
+				for sd_i in randi_range(3, 6):
+					stardust_points.append({
+						"pos": m.pos + Vector2(randf_range(-15, 15), randf_range(-15, 15)),
+						"life": randf_range(4.0, 8.0),
+						"brightness": randf_range(0.3, 0.8),
+					})
 				# Flash
 				screen_flash = 0.08
 				screen_flash_color = Color(0.4, 0.8, 1.0)
@@ -984,6 +1038,83 @@ func _process(delta: float) -> void:
 	# ── Little Prince: Spawn rose (rare, once per game until collected) ──
 	if not rose_collected and play_time > 30.0 and fmod(play_time, 40.0) < game_delta:
 		_spawn_rose()
+
+	# ── Melancholic: Memory fragments ──
+	memory_timer += game_delta
+	if memory_timer > 12.0 + randf() * 8.0:
+		memory_timer = 0.0
+		var text: String = _memory_texts[randi() % _memory_texts.size()]
+		memory_fragments.append({
+			"pos": Vector2(W + 20, randf_range(HUD_H + 60, H - 100)),
+			"vel": Vector2(randf_range(-25.0, -45.0), randf_range(-3.0, 3.0)),
+			"text": text,
+			"life": 14.0,
+			"max_life": 14.0,
+		})
+	var mf_remove: Array[int] = []
+	for i in memory_fragments.size():
+		var mf = memory_fragments[i]
+		mf.pos += mf.vel * game_delta
+		mf.life -= game_delta
+		if mf.life <= 0 or mf.pos.x < -400:
+			mf_remove.append(i)
+	for i in range(mf_remove.size() - 1, -1, -1):
+		memory_fragments.remove_at(mf_remove[i])
+
+	# ── Melancholic: Ghost sheep ──
+	ghost_timer += game_delta
+	if ghost_timer > 20.0 + randf() * 15.0:
+		ghost_timer = 0.0
+		ghost_sheep.append({
+			"pos": Vector2(W + 40, randf_range(HUD_H + 80, H - 80)),
+			"vel": Vector2(randf_range(-35.0, -55.0), randf_range(-5.0, 5.0)),
+			"life": 12.0,
+			"max_life": 12.0,
+			"frame": randi() % 2,
+		})
+	var gs_remove: Array[int] = []
+	for i in ghost_sheep.size():
+		var gs = ghost_sheep[i]
+		gs.pos += gs.vel * game_delta
+		gs.pos.y += sin(play_time * 0.8 + gs.pos.x * 0.01) * 0.4
+		gs.life -= game_delta
+		if gs.life <= 0 or gs.pos.x < -80:
+			gs_remove.append(i)
+	for i in range(gs_remove.size() - 1, -1, -1):
+		ghost_sheep.remove_at(gs_remove[i])
+
+	# ── Melancholic: Whisper words ──
+	whisper_timer += game_delta
+	if whisper_timer > 5.0 + randf() * 4.0:
+		whisper_timer = 0.0
+		var word: String = _whisper_pool[randi() % _whisper_pool.size()]
+		whisper_words.append({
+			"pos": Vector2(randf_range(W * 0.3, W), randf_range(HUD_H + 40, H - 40)),
+			"vel": Vector2(randf_range(-15.0, -30.0), randf_range(-8.0, 8.0)),
+			"text": word,
+			"life": 6.0,
+			"max_life": 6.0,
+		})
+	var ww_remove: Array[int] = []
+	for i in whisper_words.size():
+		var ww = whisper_words[i]
+		ww.pos += ww.vel * game_delta
+		ww.life -= game_delta
+		if ww.life <= 0 or ww.pos.x < -100:
+			ww_remove.append(i)
+	for i in range(ww_remove.size() - 1, -1, -1):
+		whisper_words.remove_at(ww_remove[i])
+
+	# ── Stardust trails (from destroyed meteors) ──
+	var sd_remove: Array[int] = []
+	for i in stardust_points.size():
+		var sd = stardust_points[i]
+		sd.pos.x -= 15.0 * speed_mult * game_delta
+		sd.life -= game_delta
+		if sd.life <= 0 or sd.pos.x < -10:
+			sd_remove.append(i)
+	for i in range(sd_remove.size() - 1, -1, -1):
+		stardust_points.remove_at(sd_remove[i])
 
 	# ── Update particles ──
 	var p_remove: Array[int] = []
@@ -1430,6 +1561,60 @@ func _draw() -> void:
 			draw_circle(Vector2(nx, ny) + shake_offset, r, Color(nebula_r, nebula_g, nebula_b, 0.04))
 			draw_circle(Vector2(nx + 15, ny - 8) + shake_offset, r * 0.65, Color(nebula_r * 0.7, nebula_g, nebula_b * 1.2, 0.03))
 
+	# Stardust trails (left behind by destroyed meteors)
+	for sd in stardust_points:
+		var sd_alpha := clampf(sd.life / 6.0, 0.0, 1.0)
+		var sd_pulse := 0.5 + sin(play_time * 3.0 + sd.pos.x * 0.05) * 0.5
+		var sd_b: float = sd.brightness
+		draw_circle(sd.pos + shake_offset, 1.0 + sd_b * 1.5, Color(0.8, 0.85, 1.0, sd_alpha * sd_b * sd_pulse))
+		if sd_b > 0.5:
+			draw_circle(sd.pos + shake_offset, 0.5 + sd_b, Color(1.0, 0.95, 0.9, sd_alpha * 0.3 * sd_pulse))
+
+	# Ghost sheep (faint translucent echoes drifting through space)
+	for gs in ghost_sheep:
+		var gs_alpha := 0.0
+		var gs_life_frac: float = gs.life / gs.max_life
+		if gs_life_frac > 0.85:
+			gs_alpha = (1.0 - gs_life_frac) / 0.15
+		elif gs_life_frac < 0.15:
+			gs_alpha = gs_life_frac / 0.15
+		else:
+			gs_alpha = 1.0
+		gs_alpha *= 0.12  # Very faint
+		var gp: Vector2 = gs.pos + shake_offset
+		# Draw ghostly sheep silhouette
+		draw_texture_rect(sheep_frames[gs.frame], Rect2(gp.x - 18, gp.y - 18, 36, 36), false, Color(0.7, 0.75, 1.0, gs_alpha))
+
+	# Whisper words (single words fading through space)
+	if state == State.PLAYING:
+		var wfont := _hud_font
+		for ww in whisper_words:
+			var ww_alpha := 0.0
+			var ww_frac: float = ww.life / ww.max_life
+			if ww_frac > 0.8:
+				ww_alpha = (1.0 - ww_frac) / 0.2
+			elif ww_frac < 0.2:
+				ww_alpha = ww_frac / 0.2
+			else:
+				ww_alpha = 1.0
+			ww_alpha *= 0.08  # Very subtle
+			draw_string(wfont, ww.pos + shake_offset, ww.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.6, 0.55, 0.8, ww_alpha))
+
+	# Memory fragments (diary entries drifting through the void)
+	if state == State.PLAYING:
+		var mfont := _hud_font
+		for mf in memory_fragments:
+			var mf_alpha := 0.0
+			var mf_frac: float = mf.life / mf.max_life
+			if mf_frac > 0.85:
+				mf_alpha = (1.0 - mf_frac) / 0.15
+			elif mf_frac < 0.15:
+				mf_alpha = mf_frac / 0.15
+			else:
+				mf_alpha = 1.0
+			mf_alpha *= 0.18  # Ethereal presence
+			draw_string(mfont, mf.pos + shake_offset, mf.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.75, 0.7, 0.9, mf_alpha))
+
 	# Particles
 	for p in particles:
 		var alpha := clampf(p.life / p.max_life, 0.0, 1.0)
@@ -1625,171 +1810,151 @@ func _draw() -> void:
 # ─── HUD Panel (retro Mega Drive style) ───
 
 func _draw_hud_panel() -> void:
-	var ph := HUD_H  # Panel height
+	var ph := HUD_H
 	var font := _hud_font
 	var t := play_time
 
 	# ── Panel background ──
-	# Main dark fill
-	draw_rect(Rect2(0, 0, W, ph), Color(0.04, 0.03, 0.08, 0.95))
+	draw_rect(Rect2(0, 0, W, ph), Color(0.03, 0.025, 0.07, 0.96))
 
-	# Beveled border — outer highlight (top-left edges = lighter)
-	var border_hi := Color(0.45, 0.4, 0.55, 0.9)
-	var border_lo := Color(0.12, 0.1, 0.18, 0.9)
-	var border_mid := Color(0.25, 0.22, 0.35, 0.8)
-	# Top edge highlight
-	draw_rect(Rect2(0, 0, W, 1), border_hi)
-	draw_rect(Rect2(0, 1, W, 1), border_mid)
-	# Bottom edge shadow
-	draw_rect(Rect2(0, ph - 1, W, 1), border_lo)
-	draw_rect(Rect2(0, ph - 2, W, 1), border_mid)
-	# Inner neon line at bottom
-	draw_rect(Rect2(0, ph - 3, W, 1), Color(0.4, 0.15, 0.7, 0.5))
+	# Beveled border — metallic 3D look
+	draw_rect(Rect2(0, 0, W, 2), Color(0.5, 0.45, 0.6, 0.8))
+	draw_rect(Rect2(0, 2, W, 1), Color(0.3, 0.27, 0.4, 0.6))
+	draw_rect(Rect2(0, ph - 2, W, 2), Color(0.1, 0.08, 0.15, 0.9))
+	# Neon accent at bottom
+	draw_rect(Rect2(0, ph - 3, W, 1), Color(0.35, 0.15, 0.65, 0.45))
 
-	# Corner rivets (decorative bolts)
-	for cx in [10.0, W - 10.0]:
-		for cy in [10.0, ph - 10.0]:
-			draw_circle(Vector2(cx, cy), 3.0, Color(0.35, 0.3, 0.4, 0.6))
-			draw_circle(Vector2(cx, cy), 1.5, Color(0.55, 0.5, 0.6, 0.5))
+	# Corner rivets
+	for cx in [12.0, W - 12.0]:
+		for cy in [12.0, ph - 12.0]:
+			draw_circle(Vector2(cx, cy), 3.5, Color(0.35, 0.3, 0.4, 0.5))
+			draw_circle(Vector2(cx, cy), 1.8, Color(0.6, 0.55, 0.65, 0.4))
 
-	# ── Section separators (vertical lines) ──
-	var sep1 := 220.0   # After lives section
-	var sep2 := 580.0   # After score section
-	var sep3 := 900.0   # After power-ups section
+	# ── Section separators ──
+	var sep1 := 240.0
+	var sep2 := 600.0
+	var sep3 := 920.0
 	for sx in [sep1, sep2, sep3]:
-		draw_rect(Rect2(sx, 4, 1, ph - 8), Color(0.3, 0.25, 0.4, 0.5))
-		draw_rect(Rect2(sx + 1, 4, 1, ph - 8), Color(0.1, 0.08, 0.15, 0.5))
+		draw_rect(Rect2(sx, 5, 1, ph - 10), Color(0.35, 0.3, 0.45, 0.5))
+		draw_rect(Rect2(sx + 1, 5, 1, ph - 10), Color(0.08, 0.06, 0.12, 0.5))
 
 	# ═══════════════════════════════════════════
-	# SECTION 1: Lives (left, 0..sep1)
+	# SECTION 1: Lives & Wave (0..sep1)
 	# ═══════════════════════════════════════════
-	draw_string(font, Vector2(20, 18), "LIVES", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.6, 0.5, 0.7, 0.7))
-	# Draw hearts
+	draw_string(font, Vector2(24, 20), "LIVES", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.6, 0.5, 0.75, 0.8))
 	for i in MAX_LIVES:
-		var hx := 20.0 + i * 24.0
-		var hy := 26.0
+		var hx := 24.0 + i * 28.0
+		var hy := 28.0
 		if i < lives:
-			# Full heart — draw with texture
-			draw_texture_rect(heart_full_tex, Rect2(hx, hy, 20, 20), false, Color.WHITE)
+			draw_texture_rect(heart_full_tex, Rect2(hx, hy, 24, 24), false, Color.WHITE)
 		else:
-			draw_texture_rect(heart_empty_tex, Rect2(hx, hy, 20, 20), false, Color(0.4, 0.4, 0.5, 0.5))
+			draw_texture_rect(heart_empty_tex, Rect2(hx, hy, 24, 24), false, Color(0.3, 0.3, 0.4, 0.4))
 
-	# Wave indicator below hearts
-	draw_string(font, Vector2(155, 18), "W%d" % wave, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.85, 0.3, 0.9))
-	# Combo (when active)
+	# Wave number
+	draw_string(font, Vector2(175, 20), "WAVE", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.6, 0.5, 0.75, 0.7))
+	draw_string(font, Vector2(175, 42), "%d" % wave, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(1.0, 0.85, 0.3, 1.0))
+
+	# Combo
 	if combo_count >= 2:
 		var pulse := 0.5 + sin(t * 8.0) * 0.5
-		var combo_col := Color(1.0, 0.4 + pulse * 0.4, 0.1, 1.0)
+		var combo_col := Color(1.0, 0.5 + pulse * 0.3, 0.15, 1.0)
 		if combo_count >= 10:
-			combo_col = Color(1.0, 0.2 + pulse * 0.3, 1.0, 1.0)
+			combo_col = Color(1.0, 0.3 + pulse * 0.3, 1.0, 1.0)
 		elif combo_count >= 5:
-			combo_col = Color(1.0, 0.8 + pulse * 0.2, 0.0, 1.0)
-		draw_string(font, Vector2(155, 42), "COMBOx%d" % combo_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, combo_col)
+			combo_col = Color(1.0, 0.8 + pulse * 0.2, 0.1, 1.0)
+		draw_string(font, Vector2(24, 58), "COMBO x%d" % combo_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, combo_col)
 
 	# ═══════════════════════════════════════════
 	# SECTION 2: Score & stats (sep1..sep2)
 	# ═══════════════════════════════════════════
-	# Score (large, bright)
-	draw_string(font, Vector2(sep1 + 14, 15), "SCORE", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.5, 0.4, 0.6, 0.6))
-	draw_string(font, Vector2(sep1 + 14, 32), "%d" % score, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.1, 1.0, 0.8, 1.0))
-	# High score
-	draw_string(font, Vector2(sep1 + 14, 50), "HI %d" % high_score, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.8, 0.6, 0.2, 0.6))
-	# Distance & time
+	draw_string(font, Vector2(sep1 + 16, 18), "SCORE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.5, 0.45, 0.65, 0.7))
+	draw_string(font, Vector2(sep1 + 16, 40), "%d" % score, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.1, 1.0, 0.8, 1.0))
+	draw_string(font, Vector2(sep1 + 16, 58), "HI %d" % high_score, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.75, 0.55, 0.2, 0.6))
+
 	var mins := int(t) / 60
 	var secs := int(t) % 60
-	draw_string(font, Vector2(sep2 - 14, 18), "%dm" % int(distance), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(0.6, 0.5, 0.8, 0.8))
-	draw_string(font, Vector2(sep2 - 14, 36), "%d:%02d" % [mins, secs], HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.85, 0.3, 0.7))
-	# Meteors destroyed
+	draw_string(font, Vector2(sep2 - 16, 20), "%dm" % int(distance), HORIZONTAL_ALIGNMENT_RIGHT, -1, 15, Color(0.6, 0.5, 0.85, 0.9))
+	draw_string(font, Vector2(sep2 - 16, 40), "%d:%02d" % [mins, secs], HORIZONTAL_ALIGNMENT_RIGHT, -1, 15, Color(1.0, 0.85, 0.3, 0.8))
 	if meteors_destroyed > 0:
-		draw_string(font, Vector2(sep2 - 14, 52), "KILLS %d" % meteors_destroyed, HORIZONTAL_ALIGNMENT_RIGHT, -1, 10, Color(1.0, 0.5, 0.3, 0.6))
+		draw_string(font, Vector2(sep2 - 16, 58), "KILLS %d" % meteors_destroyed, HORIZONTAL_ALIGNMENT_RIGHT, -1, 13, Color(1.0, 0.5, 0.3, 0.7))
 
 	# ═══════════════════════════════════════════
 	# SECTION 3: Power-ups (sep2..sep3)
 	# ═══════════════════════════════════════════
-	var pu_x := sep2 + 14.0
-	var pu_y := 10.0
+	var pu_x := sep2 + 16.0
+	var pu_y := 6.0
+	var bar_total := 90.0
+	var bar_h := 10.0
+	var any_pu := false
 
-	# Shield status
 	if shield_active:
-		var bar_w := 70.0 * clampf(shield_timer / 12.0, 0.0, 1.0)
-		# Label
-		draw_string(font, Vector2(pu_x, pu_y + 10), "SHIELD", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.4, 0.9, 1.0, 0.8))
-		# Timer bar background
-		draw_rect(Rect2(pu_x + 50, pu_y + 2, 70, 8), Color(0.15, 0.12, 0.2, 0.6))
-		# Timer bar fill
-		draw_rect(Rect2(pu_x + 50, pu_y + 2, bar_w, 8), Color(0.3, 0.85, 1.0, 0.8))
+		any_pu = true
+		var bar_w := bar_total * clampf(shield_timer / 12.0, 0.0, 1.0)
+		draw_string(font, Vector2(pu_x, pu_y + 14), "SHIELD", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.4, 0.9, 1.0, 0.9))
+		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_total, bar_h), Color(0.12, 0.1, 0.18, 0.6))
+		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_w, bar_h), Color(0.3, 0.85, 1.0, 0.85))
 		if shield_timer < 3.0 and int(shield_timer * 4) % 2 == 0:
-			draw_rect(Rect2(pu_x + 50, pu_y + 2, bar_w, 8), Color(1.0, 0.3, 0.3, 0.4))
-		# Time text
-		draw_string(font, Vector2(pu_x + 125, pu_y + 10), "%.0fs" % shield_timer, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.4, 0.9, 1.0, 0.7))
-		pu_y += 15.0
+			draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_w, bar_h), Color(1.0, 0.3, 0.3, 0.4))
+		draw_string(font, Vector2(pu_x + 160, pu_y + 14), "%.0fs" % shield_timer, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.4, 0.9, 1.0, 0.8))
+		pu_y += 18.0
 
-	# Magnet status
 	if magnet_active:
-		var bar_w := 70.0 * clampf(magnet_timer / 10.0, 0.0, 1.0)
-		draw_string(font, Vector2(pu_x, pu_y + 10), "MAGNET", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.4, 0.6, 0.8))
-		draw_rect(Rect2(pu_x + 50, pu_y + 2, 70, 8), Color(0.15, 0.12, 0.2, 0.6))
-		draw_rect(Rect2(pu_x + 50, pu_y + 2, bar_w, 8), Color(1.0, 0.4, 0.6, 0.8))
-		draw_string(font, Vector2(pu_x + 125, pu_y + 10), "%.0fs" % magnet_timer, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.5, 0.7, 0.7))
-		pu_y += 15.0
+		any_pu = true
+		var bar_w := bar_total * clampf(magnet_timer / 10.0, 0.0, 1.0)
+		draw_string(font, Vector2(pu_x, pu_y + 14), "MAGNET", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1.0, 0.4, 0.6, 0.9))
+		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_total, bar_h), Color(0.12, 0.1, 0.18, 0.6))
+		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_w, bar_h), Color(1.0, 0.4, 0.6, 0.85))
+		draw_string(font, Vector2(pu_x + 160, pu_y + 14), "%.0fs" % magnet_timer, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1.0, 0.5, 0.7, 0.8))
+		pu_y += 18.0
 
-	# Slow-mo status
 	if slowmo_active:
-		var bar_w := 70.0 * clampf(slowmo_timer / 6.0, 0.0, 1.0)
-		draw_string(font, Vector2(pu_x, pu_y + 10), "SLOW-MO", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.6, 0.3, 1.0, 0.8))
-		draw_rect(Rect2(pu_x + 50, pu_y + 2, 70, 8), Color(0.15, 0.12, 0.2, 0.6))
-		draw_rect(Rect2(pu_x + 50, pu_y + 2, bar_w, 8), Color(0.6, 0.3, 1.0, 0.8))
-		draw_string(font, Vector2(pu_x + 125, pu_y + 10), "%.0fs" % slowmo_timer, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.7, 0.4, 1.0, 0.7))
-		pu_y += 15.0
+		any_pu = true
+		var bar_w := bar_total * clampf(slowmo_timer / 6.0, 0.0, 1.0)
+		draw_string(font, Vector2(pu_x, pu_y + 14), "SLOW-MO", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.6, 0.3, 1.0, 0.9))
+		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_total, bar_h), Color(0.12, 0.1, 0.18, 0.6))
+		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_w, bar_h), Color(0.6, 0.3, 1.0, 0.85))
+		draw_string(font, Vector2(pu_x + 160, pu_y + 14), "%.0fs" % slowmo_timer, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.7, 0.4, 1.0, 0.8))
+		pu_y += 18.0
 
-	# If no power-ups active, show hint
-	if not shield_active and not magnet_active and not slowmo_active:
-		draw_string(font, Vector2(pu_x, 35), "NO ACTIVE POWER-UPS", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.35, 0.3, 0.45, 0.4))
-
-	# Fox companion indicator
 	if fox_active:
-		draw_string(font, Vector2(pu_x, pu_y + 10), "FOX", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.7, 0.2, 0.8))
-		var fox_bar := 70.0 * clampf(fox_timer / FOX_DURATION, 0.0, 1.0)
-		draw_rect(Rect2(pu_x + 50, pu_y + 2, 70, 8), Color(0.15, 0.12, 0.2, 0.6))
-		draw_rect(Rect2(pu_x + 50, pu_y + 2, fox_bar, 8), Color(1.0, 0.7, 0.2, 0.8))
+		any_pu = true
+		var fox_bar := bar_total * clampf(fox_timer / FOX_DURATION, 0.0, 1.0)
+		draw_string(font, Vector2(pu_x, pu_y + 14), "FOX", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1.0, 0.7, 0.2, 0.9))
+		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_total, bar_h), Color(0.12, 0.1, 0.18, 0.6))
+		draw_rect(Rect2(pu_x + 65, pu_y + 4, fox_bar, bar_h), Color(1.0, 0.7, 0.2, 0.85))
+
+	if not any_pu:
+		draw_string(font, Vector2(pu_x, 38), "no power-ups", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.3, 0.28, 0.4, 0.35))
 
 	# ═══════════════════════════════════════════
-	# SECTION 4: Weapon status (sep3..W)
+	# SECTION 4: Weapon (sep3..W)
 	# ═══════════════════════════════════════════
-	var wp_x := sep3 + 14.0
-	draw_string(font, Vector2(wp_x, 15), "SOUND WAVE", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.5, 0.7, 0.9, 0.6))
+	var wp_x := sep3 + 16.0
+	draw_string(font, Vector2(wp_x, 18), "SOUND WAVE", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.5, 0.7, 0.9, 0.7))
 
 	if wave_charging:
-		# Charging bar
 		var charge_pct := int(wave_charge * 100)
-		var bar_w := 120.0 * wave_charge
-		draw_rect(Rect2(wp_x, 20, 120, 12), Color(0.15, 0.12, 0.2, 0.6))
-		# Animated fill color
+		var bar_w := 140.0 * wave_charge
+		draw_rect(Rect2(wp_x, 24, 140, 14), Color(0.12, 0.1, 0.18, 0.6))
 		var charge_col := Color(0.3 + wave_charge * 0.7, 0.7 + wave_charge * 0.2, 1.0, 0.9)
-		draw_rect(Rect2(wp_x, 20, bar_w, 12), charge_col)
-		# Bright edge
-		if bar_w > 2:
-			draw_rect(Rect2(wp_x + bar_w - 2, 20, 2, 12), Color(1.0, 1.0, 1.0, 0.6))
-		draw_string(font, Vector2(wp_x + 125, 32), "CHG %d%%" % charge_pct, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, charge_col)
+		draw_rect(Rect2(wp_x, 24, bar_w, 14), charge_col)
+		if bar_w > 3:
+			draw_rect(Rect2(wp_x + bar_w - 2, 24, 2, 14), Color(1.0, 1.0, 1.0, 0.5))
+		draw_string(font, Vector2(wp_x + 148, 38), "CHG %d%%" % charge_pct, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, charge_col)
 	elif wave_cooldown > 0:
-		# Cooldown bar
 		var cd_frac := wave_cooldown / WAVE_COOLDOWN
-		draw_rect(Rect2(wp_x, 20, 120, 12), Color(0.15, 0.12, 0.2, 0.6))
-		draw_rect(Rect2(wp_x, 20, 120 * cd_frac, 12), Color(0.4, 0.35, 0.5, 0.5))
-		draw_string(font, Vector2(wp_x + 125, 32), "WAIT", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.5, 0.4, 0.6, 0.6))
+		draw_rect(Rect2(wp_x, 24, 140, 14), Color(0.12, 0.1, 0.18, 0.6))
+		draw_rect(Rect2(wp_x, 24, 140 * cd_frac, 14), Color(0.35, 0.3, 0.45, 0.5))
+		draw_string(font, Vector2(wp_x + 148, 38), "WAIT", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.45, 0.4, 0.55, 0.6))
 	else:
-		# Ready indicator — pulsing
-		var ready_pulse := 0.7 + sin(t * 4.0) * 0.3
-		draw_rect(Rect2(wp_x, 20, 120, 12), Color(0.1, 0.4 * ready_pulse, 0.2 * ready_pulse, 0.4))
-		draw_rect(Rect2(wp_x, 20, 120, 12), Color(0.2, 0.8, 0.5, 0.15 * ready_pulse))
-		draw_string(font, Vector2(wp_x + 125, 32), "READY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.3, 1.0, 0.6, ready_pulse))
+		var rp := 0.7 + sin(t * 4.0) * 0.3
+		draw_rect(Rect2(wp_x, 24, 140, 14), Color(0.08, 0.35 * rp, 0.15 * rp, 0.35))
+		draw_string(font, Vector2(wp_x + 148, 38), "READY", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.3, 1.0, 0.6, rp))
 
-	# Meteor storm warning in HUD
+	# Storm / status line
 	if meteor_storm:
-		var warn_pulse := 0.5 + sin(t * 6.0) * 0.5
-		draw_string(font, Vector2(wp_x, 50), "!! METEOR STORM !!", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1.0, 0.2, 0.1, warn_pulse))
-	elif fox_active:
-		draw_string(font, Vector2(wp_x, 50), "Fox companion active", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.75, 0.3, 0.5))
+		var wp2 := 0.5 + sin(t * 6.0) * 0.5
+		draw_string(font, Vector2(wp_x, 58), "!! STORM !!", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.2, 0.1, wp2))
 
 # ─── Audio: FM Synth Melody ───
 
