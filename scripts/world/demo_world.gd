@@ -121,6 +121,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_asteroid_count = mini(_asteroid_count + 10, 100)
 			_spawn_asteroids(_asteroid_count)
 			_update_slider()
+		elif event.keycode == KEY_TAB:
+			get_tree().change_scene_to_file("res://scenes/minigame/minigame.tscn")
 
 func _spawn_asteroids(count: int = 40) -> void:
 	# Remove existing asteroids
