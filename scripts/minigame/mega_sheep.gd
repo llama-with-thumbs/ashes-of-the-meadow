@@ -15,10 +15,11 @@ var state: State = State.TITLE
 
 const W: float = 1280.0
 const H: float = 720.0
+const HUD_H: float = 58.0  # Top panel height
 
 # ─── Player ───
 
-var sheep_pos: Vector2 = Vector2(140, 360)
+var sheep_pos: Vector2 = Vector2(140, 400)
 var sheep_speed: float = 280.0
 var sheep_hitbox: float = 15.0
 var sheep_frames: Array[ImageTexture] = []
@@ -127,19 +128,14 @@ var star_layers: Array = []
 # ─── UI Nodes ───
 
 var sheep_sprite: Sprite2D
-var heart_sprites: Array[Sprite2D] = []
 var heart_full_tex: ImageTexture
 var heart_empty_tex: ImageTexture
-var score_label: Label
-var dist_label: Label
-var time_label: Label
-var combo_label: Label
-var powerup_label: Label
 var wave_label: Label
 var title_label: Label
 var results_label: Label
 var item_sprites: Dictionary = {}
 var point_popups: Array = []
+var _hud_font: Font
 
 # ─── Audio ───
 
@@ -269,6 +265,8 @@ func _build_stars() -> void:
 		star_layers.append(layer)
 
 func _build_hud() -> void:
+	_hud_font = ThemeDB.fallback_font
+
 	sheep_sprite = Sprite2D.new()
 	sheep_sprite.texture = sheep_frames[0]
 	sheep_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -276,65 +274,9 @@ func _build_hud() -> void:
 	sheep_sprite.z_index = 20
 	add_child(sheep_sprite)
 
-	for i in MAX_LIVES:
-		var h := Sprite2D.new()
-		h.texture = heart_full_tex
-		h.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		h.scale = Vector2(3.0, 3.0)
-		h.position = Vector2(30 + i * 30, 30)
-		h.z_index = 50
-		add_child(h)
-		heart_sprites.append(h)
-
-	score_label = Label.new()
-	score_label.z_index = 50
-	score_label.position = Vector2(1000, 10)
-	score_label.size = Vector2(260, 30)
-	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	score_label.add_theme_font_size_override("font_size", 24)
-	score_label.add_theme_color_override("font_color", Color(0.0, 1.0, 0.8))
-	add_child(score_label)
-
-	dist_label = Label.new()
-	dist_label.z_index = 50
-	dist_label.position = Vector2(1000, 38)
-	dist_label.size = Vector2(260, 22)
-	dist_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	dist_label.add_theme_font_size_override("font_size", 16)
-	dist_label.add_theme_color_override("font_color", Color(0.6, 0.5, 0.8))
-	add_child(dist_label)
-
-	time_label = Label.new()
-	time_label.z_index = 50
-	time_label.position = Vector2(1000, 58)
-	time_label.size = Vector2(260, 22)
-	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	time_label.add_theme_font_size_override("font_size", 16)
-	time_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
-	add_child(time_label)
-
-	combo_label = Label.new()
-	combo_label.z_index = 50
-	combo_label.position = Vector2(20, 55)
-	combo_label.size = Vector2(230, 30)
-	combo_label.add_theme_font_size_override("font_size", 20)
-	combo_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.1))
-	combo_label.visible = false
-	add_child(combo_label)
-
-	# Active power-up indicator
-	powerup_label = Label.new()
-	powerup_label.z_index = 50
-	powerup_label.position = Vector2(20, 82)
-	powerup_label.size = Vector2(300, 20)
-	powerup_label.add_theme_font_size_override("font_size", 14)
-	powerup_label.add_theme_color_override("font_color", Color(0.6, 0.9, 1.0))
-	powerup_label.visible = false
-	add_child(powerup_label)
-
 	wave_label = Label.new()
 	wave_label.z_index = 55
-	wave_label.position = Vector2(340, 180)
+	wave_label.position = Vector2(340, 200)
 	wave_label.size = Vector2(600, 60)
 	wave_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	wave_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -355,8 +297,8 @@ func _build_hud() -> void:
 
 	results_label = Label.new()
 	results_label.z_index = 50
-	results_label.position = Vector2(290, 60)
-	results_label.size = Vector2(700, 600)
+	results_label.position = Vector2(290, 80)
+	results_label.size = Vector2(700, 580)
 	results_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	results_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	results_label.add_theme_font_size_override("font_size", 18)
@@ -390,15 +332,8 @@ func _show_title() -> void:
 	title_label.text = "M E G A   S H E E P\n\n\nDrift through the ruins. Collect what remains.\nDodge the meteors. Destroy them with sound.\n\nSPACE — Fire sound wave (hold to charge!)\nGolden stars grant extra lives.\nShields, Magnets, Slow-mo & Combos!\n\n\nArrow Keys / WASD to move\n\nPress SPACE to launch\nPress ESC to return"
 	title_label.visible = true
 	results_label.visible = false
-	score_label.visible = false
-	dist_label.visible = false
-	time_label.visible = false
-	combo_label.visible = false
-	powerup_label.visible = false
 	wave_label.visible = false
 	sheep_sprite.visible = false
-	for h in heart_sprites:
-		h.visible = false
 
 func _start_game() -> void:
 	state = State.PLAYING
@@ -414,7 +349,7 @@ func _start_game() -> void:
 	collect_interval = 2.0
 	_beat_count = 0
 	_beat_timer = 0.0
-	sheep_pos = Vector2(140, H / 2.0)
+	sheep_pos = Vector2(140, (HUD_H + H) / 2.0)
 	collected_tally.clear()
 	combo_count = 0
 	combo_timer = 0.0
@@ -478,18 +413,9 @@ func _start_game() -> void:
 
 	title_label.visible = false
 	results_label.visible = false
-	score_label.visible = true
-	dist_label.visible = true
-	time_label.visible = true
-	combo_label.visible = false
-	powerup_label.visible = false
 	wave_label.visible = false
 	sheep_sprite.visible = true
 	sheep_sprite.modulate = Color.WHITE
-
-	for i in MAX_LIVES:
-		heart_sprites[i].texture = heart_full_tex if i < lives else heart_empty_tex
-		heart_sprites[i].visible = true
 
 	_announce_wave()
 
@@ -533,13 +459,9 @@ func _take_damage() -> void:
 	_play_sfx("damage")
 	_play_sfx2("hit_impact")
 
-	for i in MAX_LIVES:
-		heart_sprites[i].texture = heart_full_tex if i < lives else heart_empty_tex
-
 	combo_count = 0
 	combo_timer = 0.0
 	_last_combo_milestone = 0
-	combo_label.visible = false
 
 	_spawn_particles(sheep_pos, 15, Color(1.0, 0.3, 0.2, 0.9), 180.0)
 	# Wool puffs scatter from sheep
@@ -597,8 +519,6 @@ func _show_results() -> void:
 	results_label.text = text
 	results_label.visible = true
 	title_label.visible = false
-	combo_label.visible = false
-	powerup_label.visible = false
 	wave_label.visible = false
 
 func _transfer_resources() -> void:
@@ -735,7 +655,6 @@ func _process(delta: float) -> void:
 		if combo_timer <= 0:
 			combo_count = 0
 			_last_combo_milestone = 0
-			combo_label.visible = false
 
 	# ── Player movement ──
 	var move := Vector2.ZERO
@@ -750,7 +669,7 @@ func _process(delta: float) -> void:
 
 	sheep_pos += move * sheep_speed * delta  # Movement not affected by slow-mo
 	sheep_pos.x = clampf(sheep_pos.x, 40.0, W * 0.3)
-	sheep_pos.y = clampf(sheep_pos.y, 30.0, H - 30.0)
+	sheep_pos.y = clampf(sheep_pos.y, HUD_H + 20.0, H - 30.0)
 	sheep_sprite.position = sheep_pos
 
 	sheep_anim_timer += delta
@@ -1081,46 +1000,6 @@ func _process(delta: float) -> void:
 	score += 1
 	distance += 60.0 * speed_mult * game_delta
 
-	score_label.text = "SCORE: %d" % score
-	dist_label.text = "W%d  %dm" % [wave, int(distance)]
-	var mins := int(play_time) / 60
-	var secs := int(play_time) % 60
-	time_label.text = "TIME: %d:%02d" % [mins, secs]
-
-	# Combo display
-	if combo_count >= 2:
-		combo_label.text = "COMBO x%d" % combo_count
-		combo_label.visible = true
-		var pulse := 0.5 + sin(play_time * 8.0) * 0.5
-		var combo_col := Color(1.0, 0.4 + pulse * 0.4, 0.1, 1.0)
-		if combo_count >= 10:
-			combo_col = Color(1.0, 0.2 + pulse * 0.3, 1.0, 1.0)  # Purple for mega combo
-		elif combo_count >= 5:
-			combo_col = Color(1.0, 0.8 + pulse * 0.2, 0.0, 1.0)  # Gold for big combo
-		combo_label.add_theme_color_override("font_color", combo_col)
-	else:
-		combo_label.visible = false
-
-	# Power-up status indicator
-	var pu_parts: Array[String] = []
-	if wave_cooldown > 0:
-		pu_parts.append("WAVE %.1fs" % wave_cooldown)
-	elif wave_charging:
-		pu_parts.append("CHARGING %d%%" % int(wave_charge * 100))
-	else:
-		pu_parts.append("WAVE READY")
-	if shield_active:
-		pu_parts.append("SHIELD %.0fs" % shield_timer)
-	if magnet_active:
-		pu_parts.append("MAGNET %.0fs" % magnet_timer)
-	if slowmo_active:
-		pu_parts.append("SLOW-MO %.0fs" % slowmo_timer)
-	if pu_parts.size() > 0:
-		powerup_label.text = " | ".join(pu_parts)
-		powerup_label.visible = true
-	else:
-		powerup_label.visible = false
-
 	# Update point popups
 	var pop_remove: Array[int] = []
 	for i in point_popups.size():
@@ -1260,7 +1139,7 @@ func _summon_fox() -> void:
 	screen_flash_color = Color(1.0, 0.8, 0.3)
 
 func _spawn_baobab() -> void:
-	var y := randf_range(80.0, H - 80.0)
+	var y := randf_range(HUD_H + 30.0, H - 80.0)
 	var spr := Sprite2D.new()
 	spr.texture = baobab_sprite_tex
 	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -1275,7 +1154,7 @@ func _spawn_baobab() -> void:
 	})
 
 func _spawn_tiny_planet() -> void:
-	var y := randf_range(50.0, H - 100.0)
+	var y := randf_range(HUD_H + 20.0, H - 100.0)
 	var spr := Sprite2D.new()
 	spr.texture = planet_sprite_tex
 	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -1290,7 +1169,7 @@ func _spawn_tiny_planet() -> void:
 	})
 
 func _spawn_rose() -> void:
-	var y := randf_range(80.0, H - 80.0)
+	var y := randf_range(HUD_H + 30.0, H - 80.0)
 	var spr := Sprite2D.new()
 	spr.texture = rose_sprite_tex
 	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -1309,7 +1188,7 @@ func _spawn_rose() -> void:
 # ─── Spawning ───
 
 func _spawn_meteor() -> void:
-	var y := randf_range(30.0, H - 30.0)
+	var y := randf_range(HUD_H + 10.0, H - 30.0)
 	var roll := randf()
 	var pixel_size: int
 	var radius: float
@@ -1360,7 +1239,7 @@ func _spawn_collectible() -> void:
 			chosen = ct
 			break
 
-	var y := randf_range(40.0, H - 40.0)
+	var y := randf_range(HUD_H + 15.0, H - 40.0)
 	var spr := Sprite2D.new()
 	spr.texture = item_sprites[chosen.type]
 	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -1453,8 +1332,6 @@ func _collect_item(type: String, score_val: int) -> void:
 		rose_collected = true
 		if lives < MAX_LIVES:
 			lives += 1
-			for i in MAX_LIVES:
-				heart_sprites[i].texture = heart_full_tex if i < lives else heart_empty_tex
 		# Rose grants temporary sparkle invincibility
 		invincible = maxf(invincible, 3.0)
 		_play_sfx("collect_rose")
@@ -1472,8 +1349,6 @@ func _collect_item(type: String, score_val: int) -> void:
 	if type == "golden_star":
 		if lives < MAX_LIVES:
 			lives += 1
-			for i in MAX_LIVES:
-				heart_sprites[i].texture = heart_full_tex if i < lives else heart_empty_tex
 		_play_sfx("collect_star")
 		_spawn_popup("+%d  +1UP" % final_score, sheep_pos + Vector2(20, -25), Color(1.0, 0.9, 0.2))
 		_spawn_particles(sheep_pos, 20, pcol, 140.0)
@@ -1742,6 +1617,179 @@ func _draw() -> void:
 	# Screen flash overlay
 	if screen_flash > 0:
 		draw_rect(Rect2(0, 0, W, H), Color(screen_flash_color.r, screen_flash_color.g, screen_flash_color.b, screen_flash * 0.5))
+
+	# HUD Panel (drawn last, on top of everything)
+	if state == State.PLAYING or state == State.GAMEOVER:
+		_draw_hud_panel()
+
+# ─── HUD Panel (retro Mega Drive style) ───
+
+func _draw_hud_panel() -> void:
+	var ph := HUD_H  # Panel height
+	var font := _hud_font
+	var t := play_time
+
+	# ── Panel background ──
+	# Main dark fill
+	draw_rect(Rect2(0, 0, W, ph), Color(0.04, 0.03, 0.08, 0.95))
+
+	# Beveled border — outer highlight (top-left edges = lighter)
+	var border_hi := Color(0.45, 0.4, 0.55, 0.9)
+	var border_lo := Color(0.12, 0.1, 0.18, 0.9)
+	var border_mid := Color(0.25, 0.22, 0.35, 0.8)
+	# Top edge highlight
+	draw_rect(Rect2(0, 0, W, 1), border_hi)
+	draw_rect(Rect2(0, 1, W, 1), border_mid)
+	# Bottom edge shadow
+	draw_rect(Rect2(0, ph - 1, W, 1), border_lo)
+	draw_rect(Rect2(0, ph - 2, W, 1), border_mid)
+	# Inner neon line at bottom
+	draw_rect(Rect2(0, ph - 3, W, 1), Color(0.4, 0.15, 0.7, 0.5))
+
+	# Corner rivets (decorative bolts)
+	for cx in [10.0, W - 10.0]:
+		for cy in [10.0, ph - 10.0]:
+			draw_circle(Vector2(cx, cy), 3.0, Color(0.35, 0.3, 0.4, 0.6))
+			draw_circle(Vector2(cx, cy), 1.5, Color(0.55, 0.5, 0.6, 0.5))
+
+	# ── Section separators (vertical lines) ──
+	var sep1 := 220.0   # After lives section
+	var sep2 := 580.0   # After score section
+	var sep3 := 900.0   # After power-ups section
+	for sx in [sep1, sep2, sep3]:
+		draw_rect(Rect2(sx, 4, 1, ph - 8), Color(0.3, 0.25, 0.4, 0.5))
+		draw_rect(Rect2(sx + 1, 4, 1, ph - 8), Color(0.1, 0.08, 0.15, 0.5))
+
+	# ═══════════════════════════════════════════
+	# SECTION 1: Lives (left, 0..sep1)
+	# ═══════════════════════════════════════════
+	draw_string(font, Vector2(20, 18), "LIVES", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.6, 0.5, 0.7, 0.7))
+	# Draw hearts
+	for i in MAX_LIVES:
+		var hx := 20.0 + i * 24.0
+		var hy := 26.0
+		if i < lives:
+			# Full heart — draw with texture
+			draw_texture_rect(heart_full_tex, Rect2(hx, hy, 20, 20), false, Color.WHITE)
+		else:
+			draw_texture_rect(heart_empty_tex, Rect2(hx, hy, 20, 20), false, Color(0.4, 0.4, 0.5, 0.5))
+
+	# Wave indicator below hearts
+	draw_string(font, Vector2(155, 18), "W%d" % wave, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.85, 0.3, 0.9))
+	# Combo (when active)
+	if combo_count >= 2:
+		var pulse := 0.5 + sin(t * 8.0) * 0.5
+		var combo_col := Color(1.0, 0.4 + pulse * 0.4, 0.1, 1.0)
+		if combo_count >= 10:
+			combo_col = Color(1.0, 0.2 + pulse * 0.3, 1.0, 1.0)
+		elif combo_count >= 5:
+			combo_col = Color(1.0, 0.8 + pulse * 0.2, 0.0, 1.0)
+		draw_string(font, Vector2(155, 42), "COMBOx%d" % combo_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, combo_col)
+
+	# ═══════════════════════════════════════════
+	# SECTION 2: Score & stats (sep1..sep2)
+	# ═══════════════════════════════════════════
+	# Score (large, bright)
+	draw_string(font, Vector2(sep1 + 14, 15), "SCORE", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.5, 0.4, 0.6, 0.6))
+	draw_string(font, Vector2(sep1 + 14, 32), "%d" % score, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.1, 1.0, 0.8, 1.0))
+	# High score
+	draw_string(font, Vector2(sep1 + 14, 50), "HI %d" % high_score, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.8, 0.6, 0.2, 0.6))
+	# Distance & time
+	var mins := int(t) / 60
+	var secs := int(t) % 60
+	draw_string(font, Vector2(sep2 - 14, 18), "%dm" % int(distance), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(0.6, 0.5, 0.8, 0.8))
+	draw_string(font, Vector2(sep2 - 14, 36), "%d:%02d" % [mins, secs], HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.85, 0.3, 0.7))
+	# Meteors destroyed
+	if meteors_destroyed > 0:
+		draw_string(font, Vector2(sep2 - 14, 52), "KILLS %d" % meteors_destroyed, HORIZONTAL_ALIGNMENT_RIGHT, -1, 10, Color(1.0, 0.5, 0.3, 0.6))
+
+	# ═══════════════════════════════════════════
+	# SECTION 3: Power-ups (sep2..sep3)
+	# ═══════════════════════════════════════════
+	var pu_x := sep2 + 14.0
+	var pu_y := 10.0
+
+	# Shield status
+	if shield_active:
+		var bar_w := 70.0 * clampf(shield_timer / 12.0, 0.0, 1.0)
+		# Label
+		draw_string(font, Vector2(pu_x, pu_y + 10), "SHIELD", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.4, 0.9, 1.0, 0.8))
+		# Timer bar background
+		draw_rect(Rect2(pu_x + 50, pu_y + 2, 70, 8), Color(0.15, 0.12, 0.2, 0.6))
+		# Timer bar fill
+		draw_rect(Rect2(pu_x + 50, pu_y + 2, bar_w, 8), Color(0.3, 0.85, 1.0, 0.8))
+		if shield_timer < 3.0 and int(shield_timer * 4) % 2 == 0:
+			draw_rect(Rect2(pu_x + 50, pu_y + 2, bar_w, 8), Color(1.0, 0.3, 0.3, 0.4))
+		# Time text
+		draw_string(font, Vector2(pu_x + 125, pu_y + 10), "%.0fs" % shield_timer, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.4, 0.9, 1.0, 0.7))
+		pu_y += 15.0
+
+	# Magnet status
+	if magnet_active:
+		var bar_w := 70.0 * clampf(magnet_timer / 10.0, 0.0, 1.0)
+		draw_string(font, Vector2(pu_x, pu_y + 10), "MAGNET", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.4, 0.6, 0.8))
+		draw_rect(Rect2(pu_x + 50, pu_y + 2, 70, 8), Color(0.15, 0.12, 0.2, 0.6))
+		draw_rect(Rect2(pu_x + 50, pu_y + 2, bar_w, 8), Color(1.0, 0.4, 0.6, 0.8))
+		draw_string(font, Vector2(pu_x + 125, pu_y + 10), "%.0fs" % magnet_timer, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.5, 0.7, 0.7))
+		pu_y += 15.0
+
+	# Slow-mo status
+	if slowmo_active:
+		var bar_w := 70.0 * clampf(slowmo_timer / 6.0, 0.0, 1.0)
+		draw_string(font, Vector2(pu_x, pu_y + 10), "SLOW-MO", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.6, 0.3, 1.0, 0.8))
+		draw_rect(Rect2(pu_x + 50, pu_y + 2, 70, 8), Color(0.15, 0.12, 0.2, 0.6))
+		draw_rect(Rect2(pu_x + 50, pu_y + 2, bar_w, 8), Color(0.6, 0.3, 1.0, 0.8))
+		draw_string(font, Vector2(pu_x + 125, pu_y + 10), "%.0fs" % slowmo_timer, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.7, 0.4, 1.0, 0.7))
+		pu_y += 15.0
+
+	# If no power-ups active, show hint
+	if not shield_active and not magnet_active and not slowmo_active:
+		draw_string(font, Vector2(pu_x, 35), "NO ACTIVE POWER-UPS", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.35, 0.3, 0.45, 0.4))
+
+	# Fox companion indicator
+	if fox_active:
+		draw_string(font, Vector2(pu_x, pu_y + 10), "FOX", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.7, 0.2, 0.8))
+		var fox_bar := 70.0 * clampf(fox_timer / FOX_DURATION, 0.0, 1.0)
+		draw_rect(Rect2(pu_x + 50, pu_y + 2, 70, 8), Color(0.15, 0.12, 0.2, 0.6))
+		draw_rect(Rect2(pu_x + 50, pu_y + 2, fox_bar, 8), Color(1.0, 0.7, 0.2, 0.8))
+
+	# ═══════════════════════════════════════════
+	# SECTION 4: Weapon status (sep3..W)
+	# ═══════════════════════════════════════════
+	var wp_x := sep3 + 14.0
+	draw_string(font, Vector2(wp_x, 15), "SOUND WAVE", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.5, 0.7, 0.9, 0.6))
+
+	if wave_charging:
+		# Charging bar
+		var charge_pct := int(wave_charge * 100)
+		var bar_w := 120.0 * wave_charge
+		draw_rect(Rect2(wp_x, 20, 120, 12), Color(0.15, 0.12, 0.2, 0.6))
+		# Animated fill color
+		var charge_col := Color(0.3 + wave_charge * 0.7, 0.7 + wave_charge * 0.2, 1.0, 0.9)
+		draw_rect(Rect2(wp_x, 20, bar_w, 12), charge_col)
+		# Bright edge
+		if bar_w > 2:
+			draw_rect(Rect2(wp_x + bar_w - 2, 20, 2, 12), Color(1.0, 1.0, 1.0, 0.6))
+		draw_string(font, Vector2(wp_x + 125, 32), "CHG %d%%" % charge_pct, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, charge_col)
+	elif wave_cooldown > 0:
+		# Cooldown bar
+		var cd_frac := wave_cooldown / WAVE_COOLDOWN
+		draw_rect(Rect2(wp_x, 20, 120, 12), Color(0.15, 0.12, 0.2, 0.6))
+		draw_rect(Rect2(wp_x, 20, 120 * cd_frac, 12), Color(0.4, 0.35, 0.5, 0.5))
+		draw_string(font, Vector2(wp_x + 125, 32), "WAIT", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.5, 0.4, 0.6, 0.6))
+	else:
+		# Ready indicator — pulsing
+		var ready_pulse := 0.7 + sin(t * 4.0) * 0.3
+		draw_rect(Rect2(wp_x, 20, 120, 12), Color(0.1, 0.4 * ready_pulse, 0.2 * ready_pulse, 0.4))
+		draw_rect(Rect2(wp_x, 20, 120, 12), Color(0.2, 0.8, 0.5, 0.15 * ready_pulse))
+		draw_string(font, Vector2(wp_x + 125, 32), "READY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.3, 1.0, 0.6, ready_pulse))
+
+	# Meteor storm warning in HUD
+	if meteor_storm:
+		var warn_pulse := 0.5 + sin(t * 6.0) * 0.5
+		draw_string(font, Vector2(wp_x, 50), "!! METEOR STORM !!", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1.0, 0.2, 0.1, warn_pulse))
+	elif fox_active:
+		draw_string(font, Vector2(wp_x, 50), "Fox companion active", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.75, 0.3, 0.5))
 
 # ─── Audio: FM Synth Melody ───
 
