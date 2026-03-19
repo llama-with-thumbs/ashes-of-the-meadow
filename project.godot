@@ -16,7 +16,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="Ashes of the Meadow"
 config/description="A lonely sheep drifts through the ruins of space, carried forward by music."
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/minigame/mega_sheep.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 
 [autoload]
