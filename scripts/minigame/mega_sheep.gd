@@ -120,6 +120,12 @@ var shake_time: float = 0.0
 var screen_flash: float = 0.0  # White flash alpha (decays)
 var screen_flash_color: Color = Color.WHITE
 var damage_flash: float = 0.0  # Red vignette flash
+var death_slowmo: float = 0.0  # Slow-mo on death for dramatic effect
+var beat_pulse: float = 0.0  # Beat-reactive background pulse
+var score_display: float = 0.0  # Smoothly animated score counter
+var near_miss_flash: float = 0.0  # Brief white edge glow on near miss
+var state_fade: float = 0.0  # Fade transition between states
+var state_fading_to: State = State.TITLE
 
 # ─── Particles ───
 
@@ -388,7 +394,11 @@ func _show_title() -> void:
 	title_label.visible = true
 	results_label.visible = false
 	wave_label.visible = false
-	sheep_sprite.visible = false
+	# Show sheep floating on title screen
+	sheep_sprite.visible = true
+	sheep_pos = Vector2(W * 0.5, H * 0.55)
+	sheep_sprite.position = sheep_pos
+	sheep_sprite.modulate = Color.WHITE
 
 func _start_game() -> void:
 	state = State.PLAYING
@@ -428,6 +438,10 @@ func _start_game() -> void:
 	shake_intensity = 0.0
 	screen_flash = 0.0
 	damage_flash = 0.0
+	death_slowmo = 0.0
+	beat_pulse = 0.0
+	score_display = 0.0
+	near_miss_flash = 0.0
 	sound_waves.clear()
 	wave_cooldown = 0.0
 	wave_charge = 0.0
@@ -550,10 +564,11 @@ func _game_over() -> void:
 	sheep_sprite.modulate = Color(1.0, 0.3, 0.3)
 	shake_intensity = 15.0
 	damage_flash = 1.0
+	death_slowmo = 1.5  # Dramatic slow-motion on death
 	_play_sfx("gameover")
 	if score > high_score:
 		high_score = score
-	get_tree().create_timer(2.0).timeout.connect(_show_results)
+	get_tree().create_timer(2.5).timeout.connect(_show_results)
 
 func _show_results() -> void:
 	state = State.RESULTS
@@ -637,9 +652,12 @@ func _process(delta: float) -> void:
 	_fill_sfx_buffer()
 	_fill_sfx2_buffer()
 
-	# Slow-mo affects game delta
+	# Slow-mo and death slow-mo affect game delta
 	var game_delta := delta
-	if slowmo_active and state == State.PLAYING:
+	if death_slowmo > 0:
+		death_slowmo -= delta
+		game_delta *= 0.15 + 0.85 * clampf(1.0 - death_slowmo / 1.5, 0.0, 1.0)
+	elif slowmo_active and state == State.PLAYING:
 		game_delta *= 0.35
 
 	for layer in star_layers:
@@ -662,8 +680,41 @@ func _process(delta: float) -> void:
 	if shake_intensity > 0:
 		shake_intensity = maxf(shake_intensity - shake_decay * delta, 0.0)
 		shake_time += delta * 40.0
+	if beat_pulse > 0:
+		beat_pulse = maxf(beat_pulse - delta * 4.0, 0.0)
+	if near_miss_flash > 0:
+		near_miss_flash = maxf(near_miss_flash - delta * 5.0, 0.0)
 
-	if state != State.PLAYING:
+	# Smooth score display counter
+	if score_display < float(score):
+		var diff: float = float(score) - score_display
+		score_display = minf(score_display + diff * delta * 8.0 + 2.0, float(score))
+
+	if state != State.PLAYING and state != State.GAMEOVER:
+		# Animate sheep floating on title/results screen
+		if sheep_sprite.visible:
+			var title_time: float = Time.get_ticks_msec() / 1000.0
+			sheep_sprite.position = sheep_pos + Vector2(sin(title_time * 0.8) * 15.0, sin(title_time * 1.2) * 10.0)
+			sheep_sprite.rotation = sin(title_time * 0.5) * 0.08
+			# Animate leg frames
+			sheep_anim_timer += delta
+			if sheep_anim_timer > 0.3:
+				sheep_anim_timer -= 0.3
+				sheep_frame_idx = (sheep_frame_idx + 1) % sheep_frames.size()
+				sheep_sprite.texture = sheep_frames[sheep_frame_idx]
+		queue_redraw()
+		return
+	if state == State.GAMEOVER:
+		# Still update particles and visuals during game over
+		var p_remove_go: Array[int] = []
+		for i in particles.size():
+			var p = particles[i]
+			p.pos += p.vel * game_delta
+			p.life -= game_delta
+			if p.life <= 0:
+				p_remove_go.append(i)
+		for i in range(p_remove_go.size() - 1, -1, -1):
+			particles.remove_at(p_remove_go[i])
 		queue_redraw()
 		return
 
@@ -672,6 +723,7 @@ func _process(delta: float) -> void:
 	if _beat_timer >= BEAT_INTERVAL:
 		_beat_timer -= BEAT_INTERVAL
 		_beat_count += 1
+		beat_pulse = 0.3  # Trigger beat-reactive pulse
 
 	# ── Wave system ──
 	wave_timer += game_delta
@@ -753,8 +805,20 @@ func _process(delta: float) -> void:
 		sheep_velocity = sheep_velocity.lerp(Vector2.ZERO, SHEEP_DECEL * delta)
 
 	sheep_pos += sheep_velocity * delta  # Movement not affected by slow-mo
-	sheep_pos.x = clampf(sheep_pos.x, 40.0, W * 0.3)
-	sheep_pos.y = clampf(sheep_pos.y, HUD_H + 20.0, H - 30.0)
+	# Soft edge repulsion instead of hard clamp
+	var edge_force := Vector2.ZERO
+	if sheep_pos.x < 60.0:
+		edge_force.x += (60.0 - sheep_pos.x) * 15.0
+	elif sheep_pos.x > W * 0.3 - 20.0:
+		edge_force.x -= (sheep_pos.x - (W * 0.3 - 20.0)) * 15.0
+	if sheep_pos.y < HUD_H + 35.0:
+		edge_force.y += (HUD_H + 35.0 - sheep_pos.y) * 15.0
+	elif sheep_pos.y > H - 45.0:
+		edge_force.y -= (sheep_pos.y - (H - 45.0)) * 15.0
+	sheep_velocity += edge_force * delta
+	# Hard clamp as safety net
+	sheep_pos.x = clampf(sheep_pos.x, 30.0, W * 0.32)
+	sheep_pos.y = clampf(sheep_pos.y, HUD_H + 15.0, H - 20.0)
 	sheep_sprite.position = sheep_pos
 	# Subtle nose tilt based on vertical velocity
 	sheep_sprite.rotation = sheep_velocity.y * 0.0008
@@ -806,6 +870,18 @@ func _process(delta: float) -> void:
 			"color": trail_col,
 			"size": randf_range(2.0, 4.5),
 		})
+		# Cape flutter particles (red wisps trailing behind)
+		if randf() < 0.5:
+			var cape_y_off := randf_range(-3, 8)
+			var speed_factor: float = sheep_velocity.length() / sheep_speed
+			particles.append({
+				"pos": sheep_pos + Vector2(-22 + randf() * 4, cape_y_off),
+				"vel": Vector2(randf_range(-80, -120) * (0.5 + speed_factor * 0.5), randf_range(-15, 15) + sheep_velocity.y * 0.1),
+				"life": randf_range(0.3, 0.6),
+				"max_life": 0.6,
+				"color": Color(0.7, 0.15, 0.1, 0.25 + speed_factor * 0.15),
+				"size": randf_range(1.5, 3.5),
+			})
 
 	if near_miss_cd > 0:
 		near_miss_cd -= delta
@@ -930,8 +1006,13 @@ func _process(delta: float) -> void:
 			var bonus := 5 + wave
 			score += bonus
 			near_miss_cd = 0.4
+			near_miss_flash = 0.4
 			_play_sfx2("nearmiss")
 			_spawn_popup("NEAR! +%d" % bonus, sheep_pos + Vector2(20, -30), Color(0.5, 1.0, 0.8))
+			# Brief time dilation on near miss
+			if not slowmo_active:
+				slowmo_active = true
+				slowmo_timer = maxf(slowmo_timer, 0.3)
 
 	for i in range(m_remove.size() - 1, -1, -1):
 		var idx = m_remove[i]
@@ -944,7 +1025,20 @@ func _process(delta: float) -> void:
 	for i in collectibles.size():
 		var c = collectibles[i]
 		c.pos.x -= c.speed * speed_mult * game_delta
-		c.pos.y += sin(play_time * 3.0 + c.bob_offset) * 0.5
+		c.pos.y += sin(play_time * 3.0 + c.bob_offset) * 0.8
+
+		# Sparkle trail behind collectibles
+		if randf() < 0.12:
+			var trail_col: Color = _item_particle_colors.get(c.type, Color(1.0, 1.0, 1.0, 0.5))
+			trail_col.a = 0.3
+			particles.append({
+				"pos": c.pos + Vector2(randf_range(-5, 5), randf_range(-5, 5)),
+				"vel": Vector2(randf_range(-20, -40), randf_range(-10, 10)),
+				"life": randf_range(0.2, 0.5),
+				"max_life": 0.5,
+				"color": trail_col,
+				"size": randf_range(1.0, 2.5),
+			})
 
 		if magnet_active:
 			var to_sheep: Vector2 = sheep_pos - c.pos
@@ -1564,8 +1658,11 @@ func _draw() -> void:
 			cos(shake_time * 1.3) * shake_intensity * 0.5 + cos(shake_time * 3.1) * shake_intensity * 0.5
 		)
 
-	# Background
-	draw_rect(Rect2(0, 0, W, H), Color(0.01, 0.01, 0.04))
+	# Background (with subtle beat-reactive pulse)
+	var bg_r := 0.01 + beat_pulse * 0.02
+	var bg_g := 0.01 + beat_pulse * 0.01
+	var bg_b := 0.04 + beat_pulse * 0.03
+	draw_rect(Rect2(0, 0, W, H), Color(bg_r, bg_g, bg_b))
 	for i in range(0, 80):
 		var a := 0.015 * (1.0 - float(i) / 80.0)
 		draw_rect(Rect2(0, H - 80 + i, W, 1), Color(0.08, 0.04, 0.15, a))
@@ -1828,6 +1925,22 @@ func _draw() -> void:
 				# Warning ring when it can damage
 				draw_arc(b.pos + shake_offset, b.growth * 8.0 + sheep_hitbox, 0, TAU, 24, Color(1.0, 0.3, 0.1, 0.15), 1.0)
 
+	# Meteor edge warning indicators (arrows for incoming meteors near screen edge)
+	if state == State.PLAYING:
+		for m in meteors:
+			if m.pos.x > W - 80 and m.pos.x < W + 60:
+				var my: float = m.pos.y + shake_offset.y
+				var mx: float = W - 8.0
+				var warn_a := clampf((W + 60 - m.pos.x) / 140.0, 0.0, 0.5)
+				# Danger color based on size
+				var warn_col := Color(1.0, 0.5, 0.2, warn_a)
+				if m.radius > 18:
+					warn_col = Color(1.0, 0.2, 0.1, warn_a * 1.3)
+				# Small triangle arrow pointing left
+				draw_circle(Vector2(mx, my), 3.0 + m.radius * 0.1, warn_col)
+				draw_line(Vector2(mx - 5, my), Vector2(mx + 2, my - 4), warn_col, 1.5)
+				draw_line(Vector2(mx - 5, my), Vector2(mx + 2, my + 4), warn_col, 1.5)
+
 	# Meteor storm incoming warning
 	if storm_warning > 0 and not meteor_storm and state == State.PLAYING:
 		var sw_pulse := 0.5 + sin(star_time * 8.0) * 0.5
@@ -1874,6 +1987,28 @@ func _draw() -> void:
 	# Screen flash overlay
 	if screen_flash > 0:
 		draw_rect(Rect2(0, 0, W, H), Color(screen_flash_color.r, screen_flash_color.g, screen_flash_color.b, screen_flash * 0.5))
+
+	# Near-miss edge glow (white/cyan shimmer)
+	if near_miss_flash > 0:
+		var nm_a := near_miss_flash * 0.3
+		for i in range(0, 15):
+			var edge_a := nm_a * (15 - i) / 15.0
+			draw_rect(Rect2(0, HUD_H + i, W, 1), Color(0.5, 1.0, 0.8, edge_a))
+			draw_rect(Rect2(0, H - 1 - i, W, 1), Color(0.5, 1.0, 0.8, edge_a))
+			draw_rect(Rect2(i, HUD_H, 1, H - HUD_H), Color(0.5, 1.0, 0.8, edge_a * 0.5))
+			draw_rect(Rect2(W - 1 - i, HUD_H, 1, H - HUD_H), Color(0.5, 1.0, 0.8, edge_a * 0.5))
+
+	# Death slow-mo vignette overlay
+	if death_slowmo > 0:
+		var death_a := clampf(death_slowmo / 1.0, 0.0, 1.0) * 0.3
+		draw_rect(Rect2(0, 0, W, H), Color(0.05, 0.0, 0.1, death_a))
+		# Radial focus on sheep
+		for i in range(0, 40):
+			var vig_a := death_a * float(i) / 40.0 * 0.5
+			draw_rect(Rect2(0, HUD_H + i, W, 1), Color(0.0, 0.0, 0.0, vig_a))
+			draw_rect(Rect2(0, H - 1 - i, W, 1), Color(0.0, 0.0, 0.0, vig_a))
+			draw_rect(Rect2(i, HUD_H, 1, H - HUD_H), Color(0.0, 0.0, 0.0, vig_a))
+			draw_rect(Rect2(W - 1 - i, HUD_H, 1, H - HUD_H), Color(0.0, 0.0, 0.0, vig_a))
 
 	# HUD Panel (drawn last, on top of everything)
 	if state == State.PLAYING or state == State.GAMEOVER:
@@ -1940,7 +2075,13 @@ func _draw_hud_panel() -> void:
 	# SECTION 2: Score & stats (sep1..sep2)
 	# ═══════════════════════════════════════════
 	draw_string(font, Vector2(sep1 + 16, 18), "SCORE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.5, 0.45, 0.65, 0.7))
-	draw_string(font, Vector2(sep1 + 16, 40), "%d" % score, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.1, 1.0, 0.8, 1.0))
+	# Smooth score counter with flash when gaining points
+	var display_score := int(score_display)
+	var score_catching_up: bool = score_display < float(score) - 5.0
+	var score_col := Color(0.1, 1.0, 0.8, 1.0)
+	if score_catching_up:
+		score_col = Color(0.3, 1.0, 0.5, 1.0)  # Brighter while counting up
+	draw_string(font, Vector2(sep1 + 16, 40), "%d" % display_score, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, score_col)
 	draw_string(font, Vector2(sep1 + 16, 58), "HI %d" % high_score, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.75, 0.55, 0.2, 0.6))
 
 	var mins := int(t) / 60
