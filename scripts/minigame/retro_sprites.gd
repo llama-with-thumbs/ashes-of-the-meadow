@@ -798,136 +798,217 @@ static func generate_boss_baobab() -> ImageTexture:
 	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 
-	# Palette
-	var planet_green := _md(0.35, 0.5, 0.25)
-	var planet_brown := _md(0.45, 0.35, 0.2)
-	var planet_dark := _md(0.25, 0.2, 0.12)
-	var planet_light := _md(0.5, 0.6, 0.35)
-	var trunk_cream := _md(0.75, 0.65, 0.45)
-	var trunk_tan := _md(0.6, 0.5, 0.3)
-	var trunk_stripe := _md(0.4, 0.28, 0.15)
-	var trunk_dark := _md(0.25, 0.15, 0.08)
-	var crown_light := _md(0.4, 0.7, 0.3)
-	var crown_mid := _md(0.25, 0.55, 0.2)
-	var crown_dark := _md(0.15, 0.4, 0.12)
-	var crown_deep := _md(0.1, 0.3, 0.08)
-	var crevice := _md(0.1, 0.05, 0.02)
-	var eye_red := _md(1.0, 0.15, 0.0)
-	var eye_glow := _md(1.0, 0.4, 0.1)
-	var thorn := _md(0.35, 0.2, 0.1)
-	var outline := _md(0.1, 0.08, 0.05)
+	# Palette — twisted tree with CRT monitors
+	var trunk_cream := _md(0.78, 0.68, 0.45)
+	var trunk_tan := _md(0.65, 0.52, 0.3)
+	var trunk_stripe := _md(0.5, 0.35, 0.18)
+	var trunk_dark := _md(0.3, 0.18, 0.08)
+	var trunk_deep := _md(0.15, 0.08, 0.03)
+	var crevice := _md(0.08, 0.04, 0.02)
+	var root := _md(0.55, 0.4, 0.22)
+	var root_dark := _md(0.4, 0.25, 0.12)
+	var root_tip := _md(0.45, 0.3, 0.15)
+	var monitor_frame := _md(0.45, 0.42, 0.5)
+	var monitor_dark := _md(0.3, 0.28, 0.35)
+	var monitor_light := _md(0.55, 0.52, 0.6)
+	var screen_bg := _md(0.02, 0.05, 0.08)
+	var static_bright := _md(0.8, 0.85, 0.9)
+	var static_mid := _md(0.5, 0.55, 0.6)
+	var static_dim := _md(0.25, 0.28, 0.3)
+	var warn_red := _md(1.0, 0.15, 0.0)
+	var warn_yellow := _md(1.0, 0.85, 0.0)
+	var radar_green := _md(0.0, 1.0, 0.3)
+	var radar_dim := _md(0.0, 0.55, 0.15)
+	var lightning := _md(0.7, 0.85, 1.0)
+	var cable := _md(0.2, 0.18, 0.22)
+	var led_red := _md(1.0, 0.0, 0.0)
+	var led_green := _md(0.0, 1.0, 0.0)
+	var led_yellow := _md(1.0, 1.0, 0.0)
+	var outline := _md(0.08, 0.06, 0.04)
 
-	# ═══ SMALL PLANET at bottom ═══
-	var px := 32  # planet center x
-	var py := 54  # planet center y
-	var pr := 10  # planet radius
-	_px_circle(img, px, py, pr, planet_brown)
-	_px_circle(img, px - 3, py - 2, pr - 2, planet_green)
-	_px_circle(img, px + 3, py + 2, pr - 3, planet_dark)
-	_px_circle(img, px - 4, py - 3, 4, planet_light)
-	# Surface texture
-	_px_circle(img, px + 5, py - 1, 2, planet_dark)
-	_px_circle(img, px - 2, py + 3, 2, planet_dark)
+	# ═══ ROOTS — sprawling tentacle-like at bottom ═══
+	# Central root mass
+	_px_rect(img, 26, 52, 37, 56, root)
+	_px_rect(img, 24, 54, 39, 58, root_dark)
+	# Left roots (curving)
+	_px_rect(img, 20, 50, 27, 53, root)
+	_px_rect(img, 16, 52, 22, 55, root)
+	_px_rect(img, 13, 54, 18, 57, root_dark)
+	_px_rect(img, 10, 56, 15, 58, root_tip)
+	_px(img, 9, 57, root_tip); _px(img, 8, 58, root_tip)
+	# More left root tendrils
+	_px_rect(img, 18, 56, 21, 59, root_dark)
+	_px_rect(img, 15, 58, 19, 60, root_tip)
+	_px(img, 14, 59, root_tip); _px(img, 22, 58, root_dark)
+	# Right roots (curving)
+	_px_rect(img, 36, 50, 43, 53, root)
+	_px_rect(img, 41, 52, 47, 55, root)
+	_px_rect(img, 45, 54, 50, 57, root_dark)
+	_px_rect(img, 48, 56, 53, 58, root_tip)
+	_px(img, 54, 57, root_tip); _px(img, 55, 58, root_tip)
+	# More right root tendrils
+	_px_rect(img, 42, 56, 46, 59, root_dark)
+	_px_rect(img, 44, 58, 48, 60, root_tip)
+	_px(img, 49, 59, root_tip); _px(img, 41, 58, root_dark)
+	# Center dangling roots
+	_px_rect(img, 29, 56, 31, 60, root_dark)
+	_px_rect(img, 33, 57, 35, 61, root_tip)
+	_px(img, 30, 61, root_tip); _px(img, 34, 62, root_tip)
 
-	# ═══ ROOTS wrapping around planet ═══
-	# Left roots
-	_px_rect(img, 22, 44, 24, 50, trunk_tan)
-	_px_rect(img, 20, 48, 23, 52, trunk_stripe)
-	_px_rect(img, 19, 50, 22, 55, trunk_dark)
-	# Right roots
-	_px_rect(img, 39, 44, 41, 50, trunk_tan)
-	_px_rect(img, 40, 48, 43, 52, trunk_stripe)
-	_px_rect(img, 41, 50, 44, 55, trunk_dark)
-	# Center root base
-	_px_rect(img, 27, 43, 36, 46, trunk_tan)
-	_px_rect(img, 25, 45, 38, 47, trunk_stripe)
-
-	# ═══ TRUNK — thick and gnarled ═══
+	# ═══ TRUNK — thick gnarled with horizontal bark stripes ═══
 	# Main trunk mass
-	_px_rect(img, 26, 20, 37, 44, trunk_cream)
-	_px_rect(img, 24, 24, 39, 40, trunk_cream)
-	# Wider mid-section (gnarled bulge)
-	_px_rect(img, 23, 28, 40, 36, trunk_tan)
-	# Bark stripe patterns — horizontal bands
-	_px_rect(img, 25, 22, 38, 23, trunk_stripe)
-	_px_rect(img, 24, 27, 39, 28, trunk_stripe)
-	_px_rect(img, 23, 32, 40, 33, trunk_stripe)
-	_px_rect(img, 24, 37, 39, 38, trunk_stripe)
-	_px_rect(img, 26, 41, 37, 42, trunk_stripe)
+	_px_rect(img, 25, 22, 38, 52, trunk_cream)
+	_px_rect(img, 23, 26, 40, 48, trunk_cream)
+	# Wider bulge in middle
+	_px_rect(img, 22, 30, 41, 42, trunk_tan)
+	# Bark stripe patterns — horizontal wrapping bands
+	_px_rect(img, 24, 24, 39, 25, trunk_stripe)
+	_px_rect(img, 23, 29, 40, 30, trunk_stripe)
+	_px_rect(img, 22, 34, 41, 35, trunk_stripe)
+	_px_rect(img, 23, 39, 40, 40, trunk_stripe)
+	_px_rect(img, 24, 44, 39, 45, trunk_stripe)
+	_px_rect(img, 25, 49, 38, 50, trunk_stripe)
 	# Darker shading on right side
-	_px_rect(img, 36, 22, 39, 43, trunk_tan)
-	_px_rect(img, 38, 26, 40, 39, trunk_stripe)
+	_px_rect(img, 37, 23, 40, 51, trunk_tan)
+	_px_rect(img, 39, 28, 41, 46, trunk_stripe)
+	# Left side light
+	_px_rect(img, 24, 27, 26, 43, trunk_cream)
 
-	# ═══ MENACING CREVICE / MOUTH in trunk ═══
-	_px_rect(img, 28, 30, 35, 34, crevice)
-	_px_rect(img, 29, 29, 34, 35, crevice)
-	# Jagged edges for the mouth
-	_px(img, 27, 31, crevice); _px(img, 36, 32, crevice)
-	_px(img, 28, 35, crevice); _px(img, 35, 30, crevice)
-	# Inner darkness gradient
-	_px_rect(img, 30, 31, 33, 33, trunk_dark)
+	# ═══ DARK CREVICES in trunk ═══
+	_px_rect(img, 29, 32, 34, 37, crevice)
+	_px_rect(img, 30, 31, 33, 38, crevice)
+	_px(img, 28, 33, crevice); _px(img, 35, 35, crevice)
+	_px_rect(img, 31, 33, 32, 36, trunk_deep)
+	# Smaller crevice higher up
+	_px_rect(img, 27, 26, 30, 28, trunk_deep)
+	_px(img, 26, 27, crevice); _px(img, 31, 27, trunk_deep)
 
-	# ═══ GLOWING RED EYE-LIKE KNOTS ═══
-	# Left eye knot
-	_px_circle(img, 28, 26, 2, trunk_dark)
-	_px(img, 28, 26, eye_red)
-	_px(img, 27, 26, eye_glow)
-	_px(img, 29, 25, eye_glow)
-	# Right eye knot
-	_px_circle(img, 35, 25, 2, trunk_dark)
-	_px(img, 35, 25, eye_red)
-	_px(img, 36, 25, eye_glow)
-	_px(img, 34, 24, eye_glow)
+	# ═══ TWISTED BRANCHES reaching up and out ═══
+	# Left branch — curves up-left to hold monitor
+	_px_rect(img, 18, 20, 25, 23, trunk_tan)
+	_px_rect(img, 14, 17, 20, 21, trunk_tan)
+	_px_rect(img, 11, 14, 16, 18, trunk_stripe)
+	_px_rect(img, 15, 20, 19, 20, trunk_stripe)
+	# Sub-tendrils off left branch
+	_px_rect(img, 12, 18, 13, 22, root_dark)
+	_px(img, 11, 22, root_tip); _px(img, 10, 23, root_tip)
+	_px_rect(img, 17, 17, 18, 14, root_dark)
 
-	# ═══ THORNS on trunk ═══
-	_px(img, 22, 30, thorn); _px(img, 21, 29, thorn)
-	_px(img, 41, 31, thorn); _px(img, 42, 30, thorn)
-	_px(img, 23, 36, thorn); _px(img, 22, 35, thorn)
-	_px(img, 40, 34, thorn); _px(img, 41, 33, thorn)
-	_px(img, 24, 25, thorn); _px(img, 23, 24, thorn)
-	_px(img, 39, 26, thorn); _px(img, 40, 25, thorn)
+	# Right branch — curves up-right to hold monitor
+	_px_rect(img, 38, 19, 45, 22, trunk_tan)
+	_px_rect(img, 43, 16, 49, 20, trunk_tan)
+	_px_rect(img, 47, 13, 52, 17, trunk_stripe)
+	_px_rect(img, 44, 19, 48, 19, trunk_stripe)
+	# Sub-tendrils off right branch
+	_px_rect(img, 50, 17, 51, 21, root_dark)
+	_px(img, 52, 21, root_tip); _px(img, 53, 22, root_tip)
+	_px_rect(img, 45, 16, 46, 13, root_dark)
 
-	# ═══ BRANCHES — twisted, reaching outward ═══
-	# Left branch
-	_px_rect(img, 18, 18, 26, 21, trunk_tan)
-	_px_rect(img, 14, 15, 20, 18, trunk_tan)
-	_px_rect(img, 19, 20, 25, 20, trunk_stripe)
-	# Right branch
-	_px_rect(img, 37, 17, 45, 20, trunk_tan)
-	_px_rect(img, 43, 14, 49, 17, trunk_tan)
-	_px_rect(img, 38, 19, 44, 19, trunk_stripe)
-	# Upper branch
-	_px_rect(img, 29, 14, 34, 20, trunk_tan)
+	# Upper branch — goes straight up for center monitor
+	_px_rect(img, 29, 14, 34, 22, trunk_tan)
+	_px_rect(img, 30, 10, 33, 15, trunk_tan)
 	_px_rect(img, 30, 18, 33, 18, trunk_stripe)
+	_px_rect(img, 31, 13, 32, 13, trunk_stripe)
 
-	# ═══ CROWN — multiple overlapping green blobs ═══
-	# Large central crown
-	_px_circle(img, 32, 10, 9, crown_mid)
-	_px_circle(img, 30, 8, 7, crown_light)
-	_px_circle(img, 35, 12, 7, crown_dark)
-	# Left crown blob
-	_px_circle(img, 18, 12, 7, crown_mid)
-	_px_circle(img, 16, 10, 6, crown_light)
-	_px_circle(img, 20, 14, 5, crown_dark)
-	# Right crown blob
-	_px_circle(img, 46, 11, 7, crown_mid)
-	_px_circle(img, 44, 9, 6, crown_light)
-	_px_circle(img, 48, 13, 5, crown_dark)
-	# Upper-left crown blob
-	_px_circle(img, 22, 6, 6, crown_mid)
-	_px_circle(img, 20, 4, 5, crown_light)
-	_px_circle(img, 24, 8, 4, crown_deep)
-	# Upper-right crown blob
-	_px_circle(img, 42, 5, 6, crown_mid)
-	_px_circle(img, 40, 3, 5, crown_light)
-	_px_circle(img, 44, 7, 4, crown_deep)
-	# Top crown highlights
-	_px_circle(img, 30, 3, 4, crown_light)
-	_px_circle(img, 34, 5, 3, crown_light)
-	# Deep shadow pockets in crown
-	_px_circle(img, 26, 14, 3, crown_deep)
-	_px_circle(img, 38, 13, 3, crown_deep)
-	_px_circle(img, 32, 16, 3, crown_deep)
+	# Lower-right branch for 4th monitor
+	_px_rect(img, 40, 36, 47, 39, trunk_tan)
+	_px_rect(img, 46, 33, 52, 37, trunk_stripe)
+	_px_rect(img, 42, 38, 46, 38, trunk_stripe)
+
+	# Cables between trunk and monitors
+	_px(img, 13, 13, cable); _px(img, 12, 12, cable)
+	_px(img, 50, 12, cable); _px(img, 51, 11, cable)
+	_px(img, 31, 9, cable); _px(img, 32, 8, cable)
+	_px(img, 52, 32, cable); _px(img, 53, 31, cable)
+
+	# ═══ CRT MONITOR 1 — top-left (static/snow) ═══
+	var m1x := 3; var m1y := 4
+	# Frame
+	_px_rect(img, m1x, m1y, m1x + 13, m1y + 11, monitor_frame)
+	_px_rect(img, m1x + 1, m1y + 1, m1x + 12, m1y + 10, monitor_dark)
+	_px_rect(img, m1x, m1y, m1x + 13, m1y, monitor_light)
+	_px_rect(img, m1x, m1y, m1x, m1y + 11, monitor_light)
+	# Screen
+	_px_rect(img, m1x + 2, m1y + 2, m1x + 11, m1y + 9, screen_bg)
+	# Static snow pattern
+	_px(img, m1x + 3, m1y + 3, static_bright); _px(img, m1x + 6, m1y + 3, static_mid)
+	_px(img, m1x + 9, m1y + 4, static_bright); _px(img, m1x + 4, m1y + 5, static_dim)
+	_px(img, m1x + 7, m1y + 5, static_bright); _px(img, m1x + 10, m1y + 6, static_mid)
+	_px(img, m1x + 3, m1y + 7, static_mid); _px(img, m1x + 5, m1y + 6, static_bright)
+	_px(img, m1x + 8, m1y + 7, static_dim); _px(img, m1x + 10, m1y + 8, static_bright)
+	_px(img, m1x + 4, m1y + 8, static_bright); _px(img, m1x + 7, m1y + 9, static_mid)
+	# Antenna
+	_px(img, m1x + 4, m1y - 1, cable); _px(img, m1x + 3, m1y - 2, cable)
+	_px(img, m1x + 9, m1y - 1, cable); _px(img, m1x + 10, m1y - 2, cable)
+
+	# ═══ CRT MONITOR 2 — top-center (warning ! symbol) ═══
+	var m2x := 26; var m2y := 0
+	# Frame
+	_px_rect(img, m2x, m2y, m2x + 11, m2y + 10, monitor_frame)
+	_px_rect(img, m2x + 1, m2y + 1, m2x + 10, m2y + 9, monitor_dark)
+	_px_rect(img, m2x, m2y, m2x + 11, m2y, monitor_light)
+	_px_rect(img, m2x, m2y, m2x, m2y + 10, monitor_light)
+	# Screen — red background with warning triangle
+	_px_rect(img, m2x + 2, m2y + 2, m2x + 9, m2y + 8, warn_red)
+	# Yellow warning triangle
+	_px(img, m2x + 5, m2y + 3, warn_yellow); _px(img, m2x + 6, m2y + 3, warn_yellow)
+	_px(img, m2x + 4, m2y + 4, warn_yellow); _px(img, m2x + 7, m2y + 4, warn_yellow)
+	_px(img, m2x + 3, m2y + 5, warn_yellow); _px(img, m2x + 8, m2y + 5, warn_yellow)
+	_px(img, m2x + 3, m2y + 6, warn_yellow); _px(img, m2x + 4, m2y + 6, warn_yellow)
+	_px(img, m2x + 5, m2y + 6, warn_yellow); _px(img, m2x + 6, m2y + 6, warn_yellow)
+	_px(img, m2x + 7, m2y + 6, warn_yellow); _px(img, m2x + 8, m2y + 6, warn_yellow)
+	# ! mark
+	_px(img, m2x + 5, m2y + 4, crevice); _px(img, m2x + 6, m2y + 4, crevice)
+	_px(img, m2x + 5, m2y + 5, crevice); _px(img, m2x + 6, m2y + 5, crevice)
+	# LEDs at bottom of frame
+	_px(img, m2x + 3, m2y + 9, led_red); _px(img, m2x + 5, m2y + 9, led_yellow)
+
+	# ═══ CRT MONITOR 3 — top-right (radar/grid) ═══
+	var m3x := 47; var m3y := 3
+	# Frame
+	_px_rect(img, m3x, m3y, m3x + 13, m3y + 11, monitor_frame)
+	_px_rect(img, m3x + 1, m3y + 1, m3x + 12, m3y + 10, monitor_dark)
+	_px_rect(img, m3x, m3y, m3x + 13, m3y, monitor_light)
+	_px_rect(img, m3x, m3y, m3x, m3y + 11, monitor_light)
+	# Screen — dark with green grid
+	_px_rect(img, m3x + 2, m3y + 2, m3x + 11, m3y + 9, screen_bg)
+	# Grid lines
+	for gx in range(m3x + 4, m3x + 11, 3):
+		for gy in range(m3y + 2, m3y + 10):
+			_px(img, gx, gy, radar_dim)
+	for gy in range(m3y + 4, m3y + 9, 3):
+		for gx in range(m3x + 2, m3x + 12):
+			_px(img, gx, gy, radar_dim)
+	# Radar blip
+	_px(img, m3x + 7, m3y + 5, radar_green)
+	_px(img, m3x + 6, m3y + 5, radar_dim); _px(img, m3x + 8, m3y + 5, radar_dim)
+	_px(img, m3x + 7, m3y + 4, radar_dim); _px(img, m3x + 7, m3y + 6, radar_dim)
+	# Antenna
+	_px(img, m3x + 10, m3y - 1, cable); _px(img, m3x + 11, m3y - 2, cable)
+	# LEDs
+	_px(img, m3x + 10, m3y + 10, led_green); _px(img, m3x + 8, m3y + 10, led_red)
+
+	# ═══ CRT MONITOR 4 — lower-right (lightning/energy) ═══
+	var m4x := 50; var m4y := 26
+	# Frame
+	_px_rect(img, m4x, m4y, m4x + 12, m4y + 10, monitor_frame)
+	_px_rect(img, m4x + 1, m4y + 1, m4x + 11, m4y + 9, monitor_dark)
+	_px_rect(img, m4x, m4y, m4x + 12, m4y, monitor_light)
+	_px_rect(img, m4x, m4y, m4x, m4y + 10, monitor_light)
+	# Screen — dark blue with lightning
+	_px_rect(img, m4x + 2, m4y + 2, m4x + 10, m4y + 8, screen_bg)
+	# Lightning bolt
+	_px(img, m4x + 5, m4y + 2, lightning); _px(img, m4x + 4, m4y + 3, lightning)
+	_px(img, m4x + 5, m4y + 4, lightning); _px(img, m4x + 6, m4y + 4, lightning)
+	_px(img, m4x + 7, m4y + 5, lightning); _px(img, m4x + 6, m4y + 6, lightning)
+	_px(img, m4x + 5, m4y + 7, lightning); _px(img, m4x + 7, m4y + 7, lightning)
+	_px(img, m4x + 8, m4y + 8, lightning)
+	# Secondary bolt
+	_px(img, m4x + 8, m4y + 3, static_mid); _px(img, m4x + 9, m4y + 4, static_bright)
+	_px(img, m4x + 8, m4y + 5, static_mid)
+	# LEDs
+	_px(img, m4x + 2, m4y + 9, led_yellow); _px(img, m4x + 4, m4y + 9, led_green)
+	_px(img, m4x + 6, m4y + 9, led_red)
 
 	# ═══ OUTLINE ═══
 	_auto_outline(img, s, outline)
