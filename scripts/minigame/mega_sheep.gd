@@ -20,8 +20,11 @@ const HUD_H: float = 64.0  # Top panel height
 # ─── Player ───
 
 var sheep_pos: Vector2 = Vector2(140, 400)
+var sheep_velocity: Vector2 = Vector2.ZERO
 var sheep_speed: float = 280.0
 var sheep_hitbox: float = 15.0
+const SHEEP_ACCEL: float = 1800.0
+const SHEEP_DECEL: float = 12.0
 var sheep_frames_neutral: Array[ImageTexture] = []
 var sheep_frames_up: Array[ImageTexture] = []
 var sheep_frames_down: Array[ImageTexture] = []
@@ -104,13 +107,16 @@ var wave: int = 1
 var wave_timer: float = 0.0
 const WAVE_DURATION: float = 25.0
 var wave_announce_timer: float = 0.0
+var wave_grace: float = 0.0
 var meteor_storm: bool = false
 var storm_timer: float = 0.0
+var storm_warning: float = 0.0
 
 # ─── Screen Effects ───
 
 var shake_intensity: float = 0.0
 var shake_decay: float = 8.0
+var shake_time: float = 0.0
 var screen_flash: float = 0.0  # White flash alpha (decays)
 var screen_flash_color: Color = Color.WHITE
 var damage_flash: float = 0.0  # Red vignette flash
@@ -308,6 +314,8 @@ func _build_stars() -> void:
 				"bright": 0.15 + layer_idx * 0.2 + rng.randf() * 0.2,
 				"color_r": rng.randf_range(0.6, 1.0),
 				"color_b": rng.randf_range(0.7, 1.0),
+				"twinkle_phase": rng.randf() * TAU,
+				"twinkle_speed": rng.randf_range(0.8, 3.0),
 			})
 		star_layers.append(layer)
 
@@ -389,7 +397,7 @@ func _start_game() -> void:
 	speed_mult = 1.0
 	play_time = 0.0
 	lives = 3
-	invincible = 0.0
+	invincible = 2.0
 	meteor_timer = 0.0
 	meteor_interval = 0.9
 	collect_timer = 0.0
@@ -404,8 +412,12 @@ func _start_game() -> void:
 	wave = 1
 	wave_timer = 0.0
 	wave_announce_timer = 0.0
+	wave_grace = 0.0
 	meteor_storm = false
 	storm_timer = 0.0
+	storm_warning = 0.0
+	sheep_velocity = Vector2.ZERO
+	shake_time = 0.0
 	shield_active = false
 	shield_timer = 0.0
 	shield_hit_flash = 0.0
@@ -489,6 +501,7 @@ func _announce_wave() -> void:
 	wave_label.visible = true
 	wave_label.modulate.a = 1.0
 	wave_announce_timer = 2.5
+	wave_grace = 1.5
 	_play_sfx2("wave_start")
 
 func _take_damage() -> void:
@@ -648,6 +661,7 @@ func _process(delta: float) -> void:
 		shield_hit_flash = maxf(shield_hit_flash - delta * 3.0, 0.0)
 	if shake_intensity > 0:
 		shake_intensity = maxf(shake_intensity - shake_decay * delta, 0.0)
+		shake_time += delta * 40.0
 
 	if state != State.PLAYING:
 		queue_redraw()
@@ -675,15 +689,26 @@ func _process(delta: float) -> void:
 		if wave_announce_timer <= 0:
 			wave_label.visible = false
 
+	if wave_grace > 0:
+		wave_grace -= delta
+
+	# Storm warning 3 seconds before it triggers
+	if storm_warning > 0:
+		storm_warning -= delta
+	elif wave_timer >= WAVE_DURATION - 3.0 and (wave + 1) % 3 == 0 and not meteor_storm:
+		storm_warning = 3.0
+
 	if meteor_storm:
 		storm_timer -= game_delta
 		if storm_timer <= 0:
 			meteor_storm = false
 
-	# Difficulty ramp
-	var wave_mult := 1.0 + (wave - 1) * 0.15
-	speed_mult = (1.0 + play_time * 0.02) * wave_mult
-	meteor_interval = maxf(0.15, 0.9 - play_time * 0.006 - (wave - 1) * 0.05)
+	# Smooth difficulty ramp (interpolated across wave boundaries)
+	var wave_progress: float = wave_timer / WAVE_DURATION
+	var smooth_wave: float = float(wave - 1) + wave_progress
+	var wave_mult: float = 1.0 + smooth_wave * 0.15
+	speed_mult = (1.0 + play_time * 0.018) * wave_mult
+	meteor_interval = maxf(0.15, 0.9 - play_time * 0.005 - smooth_wave * 0.05)
 	if meteor_storm:
 		meteor_interval *= 0.3
 	collect_interval = maxf(0.6, 2.0 - play_time * 0.008)
@@ -710,7 +735,7 @@ func _process(delta: float) -> void:
 			combo_count = 0
 			_last_combo_milestone = 0
 
-	# ── Player movement ──
+	# ── Player movement (smooth acceleration/deceleration) ──
 	var move := Vector2.ZERO
 	if Input.is_action_pressed("ui_up") or Input.is_key_pressed(KEY_W):
 		move.y -= 1.0
@@ -721,16 +746,24 @@ func _process(delta: float) -> void:
 	if Input.is_action_pressed("ui_right") or Input.is_key_pressed(KEY_D):
 		move.x += 0.5
 
-	sheep_pos += move * sheep_speed * delta  # Movement not affected by slow-mo
+	if move != Vector2.ZERO:
+		var target_vel: Vector2 = move * sheep_speed
+		sheep_velocity = sheep_velocity.move_toward(target_vel, SHEEP_ACCEL * delta)
+	else:
+		sheep_velocity = sheep_velocity.lerp(Vector2.ZERO, SHEEP_DECEL * delta)
+
+	sheep_pos += sheep_velocity * delta  # Movement not affected by slow-mo
 	sheep_pos.x = clampf(sheep_pos.x, 40.0, W * 0.3)
 	sheep_pos.y = clampf(sheep_pos.y, HUD_H + 20.0, H - 30.0)
 	sheep_sprite.position = sheep_pos
+	# Subtle nose tilt based on vertical velocity
+	sheep_sprite.rotation = sheep_velocity.y * 0.0008
 
-	# Switch sprite set based on vertical movement
+	# Switch sprite set based on velocity (smooth transition)
 	var new_dir := 0
-	if move.y < -0.3:
+	if sheep_velocity.y < -60.0:
 		new_dir = 1  # Up
-	elif move.y > 0.3:
+	elif sheep_velocity.y > 60.0:
 		new_dir = 2  # Down
 	if new_dir != sheep_dir:
 		sheep_dir = new_dir
@@ -886,7 +919,7 @@ func _process(delta: float) -> void:
 			continue
 
 		var dist_to := sheep_pos.distance_to(m.pos)
-		if dist_to < sheep_hitbox + m.radius:
+		if dist_to < sheep_hitbox + m.radius and wave_grace <= 0:
 			# Meteor explosion particles
 			_spawn_particles(m.pos, 8, Color(0.8, 0.4, 0.2, 0.8), 100.0)
 			_take_damage()
@@ -937,7 +970,12 @@ func _process(delta: float) -> void:
 			c_remove.append(i)
 			continue
 
-		if sheep_pos.distance_to(c.pos) < sheep_hitbox + 12.0:
+		# Soft magnetic pull when close (always active)
+		var dist_to_sheep: float = sheep_pos.distance_to(c.pos)
+		if dist_to_sheep < sheep_hitbox + 50.0 and dist_to_sheep > sheep_hitbox + 22.0:
+			c.pos += (sheep_pos - c.pos).normalized() * 80.0 * delta
+
+		if dist_to_sheep < sheep_hitbox + 22.0:
 			_collect_item(c.type, c.score_val)
 			c_remove.append(i)
 			continue
@@ -1522,8 +1560,8 @@ func _draw() -> void:
 	var shake_offset := Vector2.ZERO
 	if shake_intensity > 0:
 		shake_offset = Vector2(
-			randf_range(-shake_intensity, shake_intensity),
-			randf_range(-shake_intensity, shake_intensity)
+			sin(shake_time * 1.0) * shake_intensity * 0.6 + sin(shake_time * 2.7) * shake_intensity * 0.4,
+			cos(shake_time * 1.3) * shake_intensity * 0.5 + cos(shake_time * 3.1) * shake_intensity * 0.5
 		)
 
 	# Background
@@ -1551,10 +1589,12 @@ func _draw() -> void:
 	if slowmo_active and state == State.PLAYING:
 		draw_rect(Rect2(0, 0, W, H), Color(0.15, 0.05, 0.3, 0.12))
 
-	# Stars
+	# Stars (with twinkling)
+	var star_time: float = play_time if state == State.PLAYING else Time.get_ticks_msec() / 1000.0
 	for layer in star_layers:
 		for star in layer.stars:
-			var col := Color(star.color_r, 0.7, star.color_b, star.bright)
+			var twinkle: float = 0.7 + 0.3 * sin(star_time * star.twinkle_speed + star.twinkle_phase)
+			var col := Color(star.color_r, 0.7, star.color_b, star.bright * twinkle)
 			var p: Vector2 = star.pos + shake_offset
 			if star.size <= 1.0:
 				draw_rect(Rect2(p.x, p.y, 1, 1), col)
@@ -1787,6 +1827,17 @@ func _draw() -> void:
 			if b.growth > 1.5:
 				# Warning ring when it can damage
 				draw_arc(b.pos + shake_offset, b.growth * 8.0 + sheep_hitbox, 0, TAU, 24, Color(1.0, 0.3, 0.1, 0.15), 1.0)
+
+	# Meteor storm incoming warning
+	if storm_warning > 0 and not meteor_storm and state == State.PLAYING:
+		var sw_pulse := 0.5 + sin(star_time * 8.0) * 0.5
+		var sw_alpha := clampf(storm_warning / 1.0, 0.0, 1.0) * sw_pulse
+		draw_string(_hud_font, Vector2(W * 0.5 - 140, H * 0.5), "METEOR STORM INCOMING", HORIZONTAL_ALIGNMENT_CENTER, 300, 20, Color(1.0, 0.3, 0.1, sw_alpha * 0.8))
+		# Subtle edge vignette warning
+		for i in range(0, 20):
+			var edge_a := sw_alpha * 0.02 * (20 - i) / 20.0
+			draw_rect(Rect2(0, HUD_H + i, W, 1), Color(1.0, 0.15, 0.05, edge_a))
+			draw_rect(Rect2(0, H - 1 - i, W, 1), Color(1.0, 0.15, 0.05, edge_a))
 
 	# Meteor storm warning
 	if meteor_storm and state == State.PLAYING:
