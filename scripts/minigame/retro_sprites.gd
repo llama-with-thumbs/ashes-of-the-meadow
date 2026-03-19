@@ -790,3 +790,279 @@ static func generate_arcade_terminal() -> ImageTexture:
 	_px(img, 16, 24, accent)
 
 	return ImageTexture.create_from_image(img)
+
+# ─── Boss Baobab on Planet (64x64) — Menacing tree on a Little-Prince planet ───
+
+static func generate_boss_baobab() -> ImageTexture:
+	var s := 64
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+
+	# Palette
+	var planet_green := _md(0.35, 0.5, 0.25)
+	var planet_brown := _md(0.45, 0.35, 0.2)
+	var planet_dark := _md(0.25, 0.2, 0.12)
+	var planet_light := _md(0.5, 0.6, 0.35)
+	var trunk_cream := _md(0.75, 0.65, 0.45)
+	var trunk_tan := _md(0.6, 0.5, 0.3)
+	var trunk_stripe := _md(0.4, 0.28, 0.15)
+	var trunk_dark := _md(0.25, 0.15, 0.08)
+	var crown_light := _md(0.4, 0.7, 0.3)
+	var crown_mid := _md(0.25, 0.55, 0.2)
+	var crown_dark := _md(0.15, 0.4, 0.12)
+	var crown_deep := _md(0.1, 0.3, 0.08)
+	var crevice := _md(0.1, 0.05, 0.02)
+	var eye_red := _md(1.0, 0.15, 0.0)
+	var eye_glow := _md(1.0, 0.4, 0.1)
+	var thorn := _md(0.35, 0.2, 0.1)
+	var outline := _md(0.1, 0.08, 0.05)
+
+	# ═══ SMALL PLANET at bottom ═══
+	var px := 32  # planet center x
+	var py := 54  # planet center y
+	var pr := 10  # planet radius
+	_px_circle(img, px, py, pr, planet_brown)
+	_px_circle(img, px - 3, py - 2, pr - 2, planet_green)
+	_px_circle(img, px + 3, py + 2, pr - 3, planet_dark)
+	_px_circle(img, px - 4, py - 3, 4, planet_light)
+	# Surface texture
+	_px_circle(img, px + 5, py - 1, 2, planet_dark)
+	_px_circle(img, px - 2, py + 3, 2, planet_dark)
+
+	# ═══ ROOTS wrapping around planet ═══
+	# Left roots
+	_px_rect(img, 22, 44, 24, 50, trunk_tan)
+	_px_rect(img, 20, 48, 23, 52, trunk_stripe)
+	_px_rect(img, 19, 50, 22, 55, trunk_dark)
+	# Right roots
+	_px_rect(img, 39, 44, 41, 50, trunk_tan)
+	_px_rect(img, 40, 48, 43, 52, trunk_stripe)
+	_px_rect(img, 41, 50, 44, 55, trunk_dark)
+	# Center root base
+	_px_rect(img, 27, 43, 36, 46, trunk_tan)
+	_px_rect(img, 25, 45, 38, 47, trunk_stripe)
+
+	# ═══ TRUNK — thick and gnarled ═══
+	# Main trunk mass
+	_px_rect(img, 26, 20, 37, 44, trunk_cream)
+	_px_rect(img, 24, 24, 39, 40, trunk_cream)
+	# Wider mid-section (gnarled bulge)
+	_px_rect(img, 23, 28, 40, 36, trunk_tan)
+	# Bark stripe patterns — horizontal bands
+	_px_rect(img, 25, 22, 38, 23, trunk_stripe)
+	_px_rect(img, 24, 27, 39, 28, trunk_stripe)
+	_px_rect(img, 23, 32, 40, 33, trunk_stripe)
+	_px_rect(img, 24, 37, 39, 38, trunk_stripe)
+	_px_rect(img, 26, 41, 37, 42, trunk_stripe)
+	# Darker shading on right side
+	_px_rect(img, 36, 22, 39, 43, trunk_tan)
+	_px_rect(img, 38, 26, 40, 39, trunk_stripe)
+
+	# ═══ MENACING CREVICE / MOUTH in trunk ═══
+	_px_rect(img, 28, 30, 35, 34, crevice)
+	_px_rect(img, 29, 29, 34, 35, crevice)
+	# Jagged edges for the mouth
+	_px(img, 27, 31, crevice); _px(img, 36, 32, crevice)
+	_px(img, 28, 35, crevice); _px(img, 35, 30, crevice)
+	# Inner darkness gradient
+	_px_rect(img, 30, 31, 33, 33, trunk_dark)
+
+	# ═══ GLOWING RED EYE-LIKE KNOTS ═══
+	# Left eye knot
+	_px_circle(img, 28, 26, 2, trunk_dark)
+	_px(img, 28, 26, eye_red)
+	_px(img, 27, 26, eye_glow)
+	_px(img, 29, 25, eye_glow)
+	# Right eye knot
+	_px_circle(img, 35, 25, 2, trunk_dark)
+	_px(img, 35, 25, eye_red)
+	_px(img, 36, 25, eye_glow)
+	_px(img, 34, 24, eye_glow)
+
+	# ═══ THORNS on trunk ═══
+	_px(img, 22, 30, thorn); _px(img, 21, 29, thorn)
+	_px(img, 41, 31, thorn); _px(img, 42, 30, thorn)
+	_px(img, 23, 36, thorn); _px(img, 22, 35, thorn)
+	_px(img, 40, 34, thorn); _px(img, 41, 33, thorn)
+	_px(img, 24, 25, thorn); _px(img, 23, 24, thorn)
+	_px(img, 39, 26, thorn); _px(img, 40, 25, thorn)
+
+	# ═══ BRANCHES — twisted, reaching outward ═══
+	# Left branch
+	_px_rect(img, 18, 18, 26, 21, trunk_tan)
+	_px_rect(img, 14, 15, 20, 18, trunk_tan)
+	_px_rect(img, 19, 20, 25, 20, trunk_stripe)
+	# Right branch
+	_px_rect(img, 37, 17, 45, 20, trunk_tan)
+	_px_rect(img, 43, 14, 49, 17, trunk_tan)
+	_px_rect(img, 38, 19, 44, 19, trunk_stripe)
+	# Upper branch
+	_px_rect(img, 29, 14, 34, 20, trunk_tan)
+	_px_rect(img, 30, 18, 33, 18, trunk_stripe)
+
+	# ═══ CROWN — multiple overlapping green blobs ═══
+	# Large central crown
+	_px_circle(img, 32, 10, 9, crown_mid)
+	_px_circle(img, 30, 8, 7, crown_light)
+	_px_circle(img, 35, 12, 7, crown_dark)
+	# Left crown blob
+	_px_circle(img, 18, 12, 7, crown_mid)
+	_px_circle(img, 16, 10, 6, crown_light)
+	_px_circle(img, 20, 14, 5, crown_dark)
+	# Right crown blob
+	_px_circle(img, 46, 11, 7, crown_mid)
+	_px_circle(img, 44, 9, 6, crown_light)
+	_px_circle(img, 48, 13, 5, crown_dark)
+	# Upper-left crown blob
+	_px_circle(img, 22, 6, 6, crown_mid)
+	_px_circle(img, 20, 4, 5, crown_light)
+	_px_circle(img, 24, 8, 4, crown_deep)
+	# Upper-right crown blob
+	_px_circle(img, 42, 5, 6, crown_mid)
+	_px_circle(img, 40, 3, 5, crown_light)
+	_px_circle(img, 44, 7, 4, crown_deep)
+	# Top crown highlights
+	_px_circle(img, 30, 3, 4, crown_light)
+	_px_circle(img, 34, 5, 3, crown_light)
+	# Deep shadow pockets in crown
+	_px_circle(img, 26, 14, 3, crown_deep)
+	_px_circle(img, 38, 13, 3, crown_deep)
+	_px_circle(img, 32, 16, 3, crown_deep)
+
+	# ═══ OUTLINE ═══
+	_auto_outline(img, s, outline)
+
+	return ImageTexture.create_from_image(img)
+
+# ─── Barbed Wire Segment (32x8) — Horizontal projectile ───
+
+static func generate_barbed_wire() -> ImageTexture:
+	var w := 32
+	var h := 8
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+
+	var wire := _md(0.6, 0.6, 0.65)
+	var wire_dark := _md(0.4, 0.4, 0.45)
+	var rust := _md(0.7, 0.4, 0.15)
+	var rust_dark := _md(0.5, 0.25, 0.1)
+
+	# Main horizontal wire — slightly wavy, two strands twisted
+	for x in range(0, 32):
+		# Upper strand
+		var y1 := 3
+		if x % 8 >= 4:
+			y1 = 4
+		_px(img, x, y1, wire)
+		# Lower strand
+		var y2 := 4
+		if x % 8 >= 4:
+			y2 = 3
+		_px(img, x, y2, wire_dark)
+
+	# Twist points — where strands cross
+	for tx in [3, 11, 19, 27]:
+		_px(img, tx, 3, wire)
+		_px(img, tx, 4, wire)
+
+	# Barb points at regular intervals — sticking up and down
+	for bx in [4, 12, 20, 28]:
+		# Barb up-left
+		_px(img, bx - 1, 2, wire)
+		_px(img, bx - 2, 1, wire)
+		# Barb up-right
+		_px(img, bx, 2, wire)
+		_px(img, bx + 1, 1, wire_dark)
+		# Barb down-left
+		_px(img, bx - 1, 5, wire)
+		_px(img, bx - 2, 6, wire_dark)
+		# Barb down-right
+		_px(img, bx, 5, wire_dark)
+		_px(img, bx + 1, 6, wire)
+
+	# Rust highlights on barbs and wire
+	_px(img, 4, 2, rust); _px(img, 5, 1, rust_dark)
+	_px(img, 12, 5, rust); _px(img, 13, 6, rust_dark)
+	_px(img, 20, 2, rust); _px(img, 21, 1, rust)
+	_px(img, 28, 5, rust_dark); _px(img, 29, 6, rust)
+	# Rust patches on wire
+	_px(img, 7, 3, rust); _px(img, 8, 4, rust_dark)
+	_px(img, 15, 4, rust); _px(img, 23, 3, rust_dark)
+
+	return ImageTexture.create_from_image(img)
+
+# ─── Retro TV Set (16x16) — CRT television projectile ───
+
+static func generate_tv_set() -> ImageTexture:
+	var s := 16
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+
+	var body := _md(0.5, 0.45, 0.35)
+	var body_light := _md(0.65, 0.6, 0.5)
+	var body_dark := _md(0.35, 0.3, 0.22)
+	var wood := _md(0.55, 0.35, 0.18)
+	var wood_dark := _md(0.4, 0.25, 0.1)
+	var screen_bg := _md(0.1, 0.1, 0.12)
+	var screen_glow := _md(0.15, 0.2, 0.25)
+	var static_bright := _md(1.0, 1.0, 1.0)
+	var static_mid := _md(0.6, 0.65, 0.7)
+	var static_dim := _md(0.3, 0.35, 0.4)
+	var antenna := _md(0.55, 0.55, 0.6)
+	var knob := _md(0.3, 0.3, 0.35)
+	var outline := _md(0.15, 0.12, 0.1)
+
+	# ═══ ANTENNA — V-shape on top ═══
+	# Left antenna
+	_px(img, 5, 0, antenna); _px(img, 6, 1, antenna); _px(img, 7, 2, antenna)
+	# Right antenna
+	_px(img, 10, 0, antenna); _px(img, 9, 1, antenna); _px(img, 8, 2, antenna)
+	# Antenna base
+	_px(img, 7, 3, antenna); _px(img, 8, 3, antenna)
+
+	# ═══ TV BODY — boxy shape ═══
+	_px_rect(img, 2, 4, 13, 13, body)
+	# Top edge highlight
+	_px_rect(img, 2, 4, 13, 4, body_light)
+	# Left edge highlight
+	for y in range(4, 14):
+		_px(img, 2, y, body_light)
+	# Right/bottom shadow
+	_px_rect(img, 13, 5, 13, 13, body_dark)
+	_px_rect(img, 3, 13, 13, 13, body_dark)
+
+	# ═══ WOOD-GRAIN SIDES ═══
+	_px_rect(img, 2, 5, 3, 12, wood)
+	_px(img, 2, 7, wood_dark); _px(img, 2, 10, wood_dark)
+	_px(img, 3, 6, wood_dark); _px(img, 3, 9, wood_dark)
+	_px_rect(img, 12, 5, 13, 12, wood)
+	_px(img, 12, 7, wood_dark); _px(img, 12, 10, wood_dark)
+	_px(img, 13, 8, wood_dark); _px(img, 13, 11, wood_dark)
+
+	# ═══ SCREEN — recessed with static ═══
+	_px_rect(img, 4, 5, 11, 11, screen_bg)
+	# Screen edge glow
+	_px_rect(img, 4, 5, 11, 5, screen_glow)
+	_px(img, 4, 6, screen_glow); _px(img, 4, 7, screen_glow)
+
+	# Static noise pixels on screen
+	_px(img, 5, 6, static_bright); _px(img, 8, 7, static_bright)
+	_px(img, 10, 9, static_bright); _px(img, 6, 10, static_bright)
+	_px(img, 7, 6, static_mid); _px(img, 9, 8, static_mid)
+	_px(img, 5, 9, static_mid); _px(img, 10, 7, static_mid)
+	_px(img, 6, 8, static_dim); _px(img, 8, 10, static_dim)
+	_px(img, 9, 6, static_dim); _px(img, 5, 8, static_dim)
+	_px(img, 11, 10, static_bright); _px(img, 7, 9, static_mid)
+
+	# ═══ CONTROL KNOBS on right side ═══
+	_px(img, 12, 6, knob)
+	_px(img, 12, 9, knob)
+
+	# ═══ FEET ═══
+	_px(img, 4, 14, body_dark); _px(img, 5, 14, body_dark)
+	_px(img, 10, 14, body_dark); _px(img, 11, 14, body_dark)
+
+	# ═══ OUTLINE ═══
+	_auto_outline(img, s, outline)
+
+	return ImageTexture.create_from_image(img)

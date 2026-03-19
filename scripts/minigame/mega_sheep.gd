@@ -112,6 +112,29 @@ var meteor_storm: bool = false
 var storm_timer: float = 0.0
 var storm_warning: float = 0.0
 
+# ─── Boss Fight ───
+
+enum BossState { NONE, ENTERING, FIGHTING, DYING, DEAD }
+var boss_state: BossState = BossState.NONE
+var boss_pos: Vector2 = Vector2.ZERO
+var boss_target_pos: Vector2 = Vector2.ZERO
+var boss_hp: int = 0
+var boss_max_hp: int = 0
+var boss_phase: int = 0  # 0, 1, 2 — attack phases based on HP
+var boss_attack_timer: float = 0.0
+var boss_move_timer: float = 0.0
+var boss_sprite: Sprite2D = null
+var boss_sprite_tex: ImageTexture
+var boss_barb_tex: ImageTexture
+var boss_tv_tex: ImageTexture
+var boss_projectiles: Array = []  # {pos, vel, type, rot, rot_speed, life}
+var boss_flash: float = 0.0  # Hit flash
+var boss_death_timer: float = 0.0
+var boss_shake: float = 0.0
+var boss_intro_text_timer: float = 0.0
+const BOSS_WAVE_INTERVAL: int = 4  # Boss every 4 waves
+const BOSS_HITBOX: float = 40.0
+
 # ─── Screen Effects ───
 
 var shake_intensity: float = 0.0
@@ -302,6 +325,11 @@ func _ready() -> void:
 	baobab_sprite_tex = RetroSprites.generate_baobab()
 	item_sprites["rose"] = rose_sprite_tex
 
+	# Boss sprites
+	boss_sprite_tex = RetroSprites.generate_boss_baobab()
+	boss_barb_tex = RetroSprites.generate_barbed_wire()
+	boss_tv_tex = RetroSprites.generate_tv_set()
+
 	_build_stars()
 	_build_hud()
 	_setup_audio()
@@ -462,6 +490,24 @@ func _start_game() -> void:
 	point_popups.clear()
 	particles.clear()
 	shooting_stars.clear()
+
+	# Boss reset
+	boss_state = BossState.NONE
+	boss_hp = 0
+	boss_phase = 0
+	boss_attack_timer = 0.0
+	boss_move_timer = 0.0
+	boss_flash = 0.0
+	boss_death_timer = 0.0
+	boss_shake = 0.0
+	boss_intro_text_timer = 0.0
+	for bp in boss_projectiles:
+		if bp.has("sprite") and bp.sprite and is_instance_valid(bp.sprite):
+			bp.sprite.queue_free()
+	boss_projectiles.clear()
+	if boss_sprite and is_instance_valid(boss_sprite):
+		boss_sprite.queue_free()
+		boss_sprite = null
 
 	# Little Prince reset
 	fox_active = false
@@ -726,12 +772,15 @@ func _process(delta: float) -> void:
 		beat_pulse = 0.3  # Trigger beat-reactive pulse
 
 	# ── Wave system ──
-	wave_timer += game_delta
-	if wave_timer >= WAVE_DURATION:
+	if boss_state == BossState.NONE or boss_state == BossState.DEAD:
+		wave_timer += game_delta
+	if wave_timer >= WAVE_DURATION and boss_state == BossState.NONE:
 		wave_timer -= WAVE_DURATION
 		wave += 1
 		_announce_wave()
-		if wave % 3 == 0:
+		if wave % BOSS_WAVE_INTERVAL == 0 and boss_state == BossState.NONE:
+			_start_boss()
+		elif wave % 3 == 0:
 			meteor_storm = true
 			storm_timer = 5.0
 
@@ -963,10 +1012,13 @@ func _process(delta: float) -> void:
 	for i in range(sw_remove.size() - 1, -1, -1):
 		sound_waves.remove_at(sw_remove[i])
 
-	# Spawn meteors
+	# Spawn meteors (reduced during boss fight)
 	meteor_timer += game_delta
-	if meteor_timer >= meteor_interval:
-		meteor_timer -= meteor_interval
+	var effective_interval: float = meteor_interval
+	if boss_state == BossState.FIGHTING or boss_state == BossState.ENTERING:
+		effective_interval *= 3.0  # Much fewer meteors during boss
+	if meteor_timer >= effective_interval:
+		meteor_timer -= effective_interval
 		_spawn_meteor()
 
 	# Spawn collectibles
@@ -1268,6 +1320,9 @@ func _process(delta: float) -> void:
 			sd_remove.append(i)
 	for i in range(sd_remove.size() - 1, -1, -1):
 		stardust_points.remove_at(sd_remove[i])
+
+	# ── Boss fight ──
+	_update_boss(game_delta, delta)
 
 	# ── Update particles ──
 	var p_remove: Array[int] = []
@@ -1648,6 +1703,326 @@ func _collect_item(type: String, score_val: int) -> void:
 		_spawn_popup(popup_text, sheep_pos + Vector2(20, -20), Color(1.0, 1.0, 0.3))
 		_spawn_particles(sheep_pos, 8, pcol, 70.0)
 
+# ─── Boss Fight ───
+
+func _start_boss() -> void:
+	boss_state = BossState.ENTERING
+	boss_hp = 20 + wave * 5
+	boss_max_hp = boss_hp
+	boss_phase = 0
+	boss_pos = Vector2(W + 80, H * 0.5)
+	boss_target_pos = Vector2(W * 0.72, H * 0.5)
+	boss_attack_timer = 3.0  # Initial delay before first attack
+	boss_move_timer = 0.0
+	boss_flash = 0.0
+	boss_death_timer = 0.0
+	boss_shake = 0.0
+	boss_intro_text_timer = 3.0
+
+	# Create boss sprite
+	boss_sprite = Sprite2D.new()
+	boss_sprite.texture = boss_sprite_tex
+	boss_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	boss_sprite.scale = Vector2(2.5, 2.5)
+	boss_sprite.z_index = 25
+	add_child(boss_sprite)
+
+	# Stop normal meteor spawning during boss
+	meteor_storm = false
+	storm_timer = 0.0
+
+	# Dramatic entrance
+	_play_sfx("boss_enter")
+	shake_intensity = 5.0
+	screen_flash = 0.3
+	screen_flash_color = Color(0.5, 0.2, 0.1)
+	wave_label.text = "!! BOSS — THE BAOBAB !!"
+	wave_label.visible = true
+	wave_label.modulate.a = 1.0
+	wave_announce_timer = 3.0
+
+func _update_boss(game_delta: float, delta: float) -> void:
+	if boss_state == BossState.NONE or boss_state == BossState.DEAD:
+		return
+
+	if boss_flash > 0:
+		boss_flash = maxf(boss_flash - delta * 5.0, 0.0)
+	if boss_shake > 0:
+		boss_shake = maxf(boss_shake - delta * 6.0, 0.0)
+
+	if boss_state == BossState.ENTERING:
+		# Slide in from right
+		boss_pos = boss_pos.lerp(boss_target_pos, 1.5 * delta)
+		if boss_pos.distance_to(boss_target_pos) < 5.0:
+			boss_state = BossState.FIGHTING
+		if boss_sprite and is_instance_valid(boss_sprite):
+			boss_sprite.position = boss_pos
+		boss_intro_text_timer -= delta
+		return
+
+	if boss_state == BossState.DYING:
+		boss_death_timer -= delta
+		# Explosion particles continuously
+		if int(boss_death_timer * 10) % 2 == 0:
+			var exp_pos: Vector2 = boss_pos + Vector2(randf_range(-40, 40), randf_range(-40, 40))
+			_spawn_particles(exp_pos, 5, Color(1.0, 0.5 + randf() * 0.3, 0.1, 0.9), 120.0)
+			if int(boss_death_timer * 5) % 3 == 0:
+				shake_intensity = 4.0
+		if boss_sprite and is_instance_valid(boss_sprite):
+			boss_sprite.modulate.a = clampf(boss_death_timer / 1.0, 0.0, 1.0)
+			boss_sprite.rotation += delta * 1.5
+			boss_sprite.scale *= (1.0 - delta * 0.3)
+		if boss_death_timer <= 0:
+			boss_state = BossState.DEAD
+			if boss_sprite and is_instance_valid(boss_sprite):
+				boss_sprite.queue_free()
+				boss_sprite = null
+			# Big explosion
+			_spawn_particles(boss_pos, 40, Color(1.0, 0.6, 0.2, 1.0), 250.0)
+			_spawn_ring_particles(boss_pos, 24, Color(0.3, 1.0, 0.4, 0.9), 50.0)
+			shake_intensity = 15.0
+			screen_flash = 0.6
+			screen_flash_color = Color(1.0, 0.8, 0.3)
+			# Boss reward
+			var boss_score := 500 + wave * 100
+			score += boss_score
+			_spawn_popup("BOSS DEFEATED! +%d" % boss_score, Vector2(W * 0.35, H * 0.4), Color(1.0, 0.9, 0.2))
+			_play_sfx("boss_die")
+			# Drop collectibles
+			for i in 5:
+				var drop_pos: Vector2 = boss_pos + Vector2(randf_range(-60, 60), randf_range(-40, 40))
+				_spawn_boss_drop(drop_pos)
+			# Clear remaining projectiles
+			for bp in boss_projectiles:
+				if bp.has("sprite") and bp.sprite and is_instance_valid(bp.sprite):
+					bp.sprite.queue_free()
+				_spawn_particles(bp.pos, 4, Color(0.6, 0.6, 0.7, 0.6), 60.0)
+			boss_projectiles.clear()
+			# Resume normal waves after boss
+			boss_state = BossState.NONE
+		return
+
+	# ── FIGHTING state ──
+	# Phase based on HP
+	var hp_frac: float = float(boss_hp) / float(boss_max_hp)
+	if hp_frac < 0.33:
+		boss_phase = 2  # Enraged
+	elif hp_frac < 0.66:
+		boss_phase = 1  # Aggressive
+	else:
+		boss_phase = 0  # Normal
+
+	# Boss movement — bob and shift vertically
+	boss_move_timer += delta
+	var bob_speed := 1.5 + boss_phase * 0.5
+	var bob_range := 80.0 + boss_phase * 40.0
+	boss_target_pos.y = H * 0.5 + sin(boss_move_timer * bob_speed) * bob_range
+	boss_target_pos.y = clampf(boss_target_pos.y, HUD_H + 60.0, H - 60.0)
+	# Phase 2: also move horizontally
+	if boss_phase >= 2:
+		boss_target_pos.x = W * 0.72 + sin(boss_move_timer * 0.7) * 60.0
+	boss_pos = boss_pos.lerp(boss_target_pos, 2.5 * delta)
+
+	if boss_sprite and is_instance_valid(boss_sprite):
+		var boss_offset := Vector2.ZERO
+		if boss_shake > 0:
+			boss_offset = Vector2(sin(boss_shake * 30.0) * boss_shake * 3.0, cos(boss_shake * 25.0) * boss_shake * 2.0)
+		boss_sprite.position = boss_pos + boss_offset
+		if boss_flash > 0:
+			boss_sprite.modulate = Color(1.0, 0.5, 0.5, 1.0)
+		else:
+			boss_sprite.modulate = Color.WHITE
+		# Subtle breathing pulse
+		var breath := 1.0 + sin(boss_move_timer * 2.0) * 0.03
+		boss_sprite.scale = Vector2(2.5 * breath, 2.5 * breath)
+
+	# Attack patterns
+	boss_attack_timer -= delta
+	if boss_attack_timer <= 0:
+		_boss_attack()
+		# Attack speed increases with phase
+		var base_interval := 1.8 - boss_phase * 0.4
+		boss_attack_timer = base_interval + randf_range(-0.3, 0.3)
+
+	# Update boss projectiles
+	var bp_remove: Array[int] = []
+	for i in boss_projectiles.size():
+		var bp = boss_projectiles[i]
+		bp.pos += bp.vel * game_delta
+		bp.rot += bp.rot_speed * game_delta
+		bp.life -= game_delta
+		if bp.has("sprite") and bp.sprite and is_instance_valid(bp.sprite):
+			bp.sprite.position = bp.pos
+			bp.sprite.rotation = bp.rot
+
+		if bp.pos.x < -60 or bp.pos.y < -30 or bp.pos.y > H + 30 or bp.life <= 0:
+			bp_remove.append(i)
+			continue
+
+		# Collision with sheep
+		var bp_radius := 10.0 if bp.type == "barb" else 8.0
+		if sheep_pos.distance_to(bp.pos) < sheep_hitbox + bp_radius and wave_grace <= 0:
+			_take_damage()
+			_spawn_particles(bp.pos, 6, Color(0.7, 0.7, 0.7, 0.8), 80.0)
+			bp_remove.append(i)
+			continue
+
+	for i in range(bp_remove.size() - 1, -1, -1):
+		var idx: int = bp_remove[i]
+		if boss_projectiles[idx].has("sprite") and boss_projectiles[idx].sprite and is_instance_valid(boss_projectiles[idx].sprite):
+			boss_projectiles[idx].sprite.queue_free()
+		boss_projectiles.remove_at(idx)
+
+	# Sound wave collision with boss
+	for sw in sound_waves:
+		var dist_to_boss: float = sw.pos.distance_to(boss_pos)
+		if dist_to_boss < BOSS_HITBOX + sw.radius:
+			var dmg := 1
+			if sw.power > 0.7:
+				dmg = 2
+			boss_hp -= dmg
+			boss_flash = 0.3
+			boss_shake = 0.3
+			shake_intensity = 3.0
+			_spawn_particles(boss_pos + Vector2(randf_range(-20, 20), randf_range(-20, 20)), 8, Color(0.3, 0.8, 0.2, 0.8), 100.0)
+			_play_sfx2("meteor_shatter")
+			_spawn_popup("-%d" % dmg, boss_pos + Vector2(randf_range(-30, 30), -40), Color(1.0, 0.3, 0.2))
+			sw.life = 0  # Consume the wave on boss hit
+
+			if boss_hp <= 0:
+				boss_state = BossState.DYING
+				boss_death_timer = 2.5
+				_play_sfx("boss_dying")
+				shake_intensity = 8.0
+				screen_flash = 0.4
+				screen_flash_color = Color(1.0, 0.5, 0.2)
+				break
+
+func _boss_attack() -> void:
+	var attack_roll := randf()
+
+	if boss_phase == 0:
+		# Phase 0: Simple barbed wire barrage
+		if attack_roll < 0.6:
+			_boss_fire_barbs(3)
+		else:
+			_boss_fire_tvs(2)
+	elif boss_phase == 1:
+		# Phase 1: More projectiles, mixed attacks
+		if attack_roll < 0.4:
+			_boss_fire_barbs(4)
+		elif attack_roll < 0.7:
+			_boss_fire_tvs(3)
+		else:
+			# Combined attack
+			_boss_fire_barbs(2)
+			_boss_fire_tvs(2)
+	else:
+		# Phase 2: Enraged — dense attacks, spiral patterns
+		if attack_roll < 0.3:
+			_boss_fire_barbs(5)
+		elif attack_roll < 0.5:
+			_boss_fire_tvs(4)
+		elif attack_roll < 0.7:
+			_boss_fire_barbs(3)
+			_boss_fire_tvs(3)
+		else:
+			# Spiral burst
+			_boss_fire_spiral()
+
+	_play_sfx2("boss_attack")
+
+func _boss_fire_barbs(count: int) -> void:
+	for i in count:
+		var spread_y := (float(i) - float(count - 1) / 2.0) * 40.0
+		var target: Vector2 = sheep_pos + Vector2(0, spread_y + randf_range(-20, 20))
+		var dir: Vector2 = (target - boss_pos).normalized()
+		var spd := 250.0 + boss_phase * 50.0 + randf_range(-30, 30)
+
+		var spr := Sprite2D.new()
+		spr.texture = boss_barb_tex
+		spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		spr.scale = Vector2(2.0, 2.0)
+		spr.z_index = 22
+		add_child(spr)
+
+		boss_projectiles.append({
+			"pos": boss_pos + Vector2(-30, spread_y * 0.3),
+			"vel": dir * spd,
+			"type": "barb",
+			"rot": atan2(dir.y, dir.x),
+			"rot_speed": 0.0,
+			"life": 6.0,
+			"sprite": spr,
+		})
+
+func _boss_fire_tvs(count: int) -> void:
+	for i in count:
+		var angle := randf_range(-0.8, 0.8)
+		var base_dir := Vector2(-1, 0).rotated(angle)
+		var spd := 180.0 + boss_phase * 40.0 + randf_range(-20, 30)
+
+		var spr := Sprite2D.new()
+		spr.texture = boss_tv_tex
+		spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		spr.scale = Vector2(2.5, 2.5)
+		spr.z_index = 22
+		add_child(spr)
+
+		boss_projectiles.append({
+			"pos": boss_pos + Vector2(-20 + randf_range(-10, 10), randf_range(-25, 25)),
+			"vel": base_dir * spd,
+			"type": "tv",
+			"rot": 0.0,
+			"rot_speed": randf_range(-4.0, 4.0),  # Tumbling
+			"life": 6.0,
+			"sprite": spr,
+		})
+
+func _boss_fire_spiral() -> void:
+	var count := 8 + boss_phase * 4
+	for i in count:
+		var angle := float(i) / float(count) * TAU + boss_move_timer
+		var dir := Vector2(cos(angle), sin(angle))
+		var spd := 160.0 + boss_phase * 30.0
+		var is_tv := i % 2 == 0
+
+		var spr := Sprite2D.new()
+		spr.texture = boss_tv_tex if is_tv else boss_barb_tex
+		spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		spr.scale = Vector2(2.0, 2.0)
+		spr.z_index = 22
+		add_child(spr)
+
+		boss_projectiles.append({
+			"pos": boss_pos,
+			"vel": dir * spd,
+			"type": "tv" if is_tv else "barb",
+			"rot": angle,
+			"rot_speed": randf_range(-3.0, 3.0) if is_tv else 0.0,
+			"life": 5.0,
+			"sprite": spr,
+		})
+
+func _spawn_boss_drop(pos: Vector2) -> void:
+	var roll := randf()
+	var type := "golden_star" if roll < 0.3 else ("music_note" if roll < 0.6 else "cassette")
+	var spr := Sprite2D.new()
+	spr.texture = item_sprites[type]
+	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	spr.scale = Vector2(3.5, 3.5)
+	spr.z_index = 15
+	add_child(spr)
+	var score_val := 50 if type != "golden_star" else 100
+	collectibles.append({
+		"pos": pos,
+		"speed": randf_range(20.0, 60.0),  # Slow drift
+		"type": type,
+		"score_val": score_val,
+		"bob_offset": randf() * TAU,
+		"sprite": spr,
+	})
+
 # ─── Drawing ───
 
 func _draw() -> void:
@@ -1908,6 +2283,51 @@ func _draw() -> void:
 						var pp := glow_pos + Vector2(cos(pa), sin(pa)) * rose_r * 0.8
 						draw_circle(pp, 1.0, Color(1.0, 0.5, 0.6, 0.3))
 
+	# Boss fight visuals
+	if boss_state != BossState.NONE and boss_state != BossState.DEAD:
+		var bp: Vector2 = boss_pos + shake_offset
+		# Boss aura glow
+		var aura_pulse := 0.5 + sin(play_time * 3.0) * 0.3
+		var aura_col := Color(0.3, 0.6, 0.15, 0.08 * aura_pulse)
+		if boss_phase >= 2:
+			aura_col = Color(0.8, 0.2, 0.1, 0.12 * aura_pulse)
+		elif boss_phase >= 1:
+			aura_col = Color(0.6, 0.4, 0.1, 0.1 * aura_pulse)
+		draw_circle(bp, 70.0 + aura_pulse * 10.0, aura_col)
+		draw_circle(bp, 50.0, Color(aura_col.r, aura_col.g, aura_col.b, aura_col.a * 0.5))
+		# Danger ring
+		draw_arc(bp, 55.0, 0, TAU, 32, Color(aura_col.r, aura_col.g, aura_col.b, aura_col.a * 3.0), 1.5)
+		# Boss HP bar (above boss)
+		if boss_state == BossState.FIGHTING:
+			var bar_w := 100.0
+			var bar_h := 8.0
+			var bar_x := bp.x - bar_w / 2.0
+			var bar_y := bp.y - 70.0
+			# Background
+			draw_rect(Rect2(bar_x - 1, bar_y - 1, bar_w + 2, bar_h + 2), Color(0.05, 0.05, 0.1, 0.8))
+			# HP fill
+			var hp_frac: float = clampf(float(boss_hp) / float(boss_max_hp), 0.0, 1.0)
+			var hp_col := Color(0.2, 0.9, 0.3, 0.9) if hp_frac > 0.5 else (Color(1.0, 0.8, 0.1, 0.9) if hp_frac > 0.25 else Color(1.0, 0.2, 0.1, 0.9))
+			draw_rect(Rect2(bar_x, bar_y, bar_w * hp_frac, bar_h), hp_col)
+			# Border
+			draw_rect(Rect2(bar_x - 1, bar_y - 1, bar_w + 2, 1), Color(0.5, 0.45, 0.6, 0.6))
+			draw_rect(Rect2(bar_x - 1, bar_y + bar_h, bar_w + 2, 1), Color(0.2, 0.15, 0.3, 0.6))
+			# Boss name
+			draw_string(_hud_font, Vector2(bar_x, bar_y - 5), "THE BAOBAB", HORIZONTAL_ALIGNMENT_LEFT, int(bar_w), 12, Color(0.8, 0.7, 0.3, 0.8))
+		# Root tendrils (animated wavy lines from boss)
+		if boss_state == BossState.FIGHTING:
+			for ri in 4:
+				var root_angle := play_time * 0.8 + ri * TAU / 4.0
+				var root_len := 30.0 + sin(play_time * 1.5 + ri) * 10.0
+				var root_end: Vector2 = bp + Vector2(cos(root_angle), sin(root_angle)) * root_len
+				var root_mid: Vector2 = bp + Vector2(cos(root_angle + 0.3), sin(root_angle + 0.3)) * root_len * 0.5
+				draw_line(bp, root_mid, Color(0.4, 0.3, 0.15, 0.2), 2.0)
+				draw_line(root_mid, root_end, Color(0.3, 0.5, 0.15, 0.15), 1.5)
+		# Boss intro text
+		if boss_intro_text_timer > 0:
+			var intro_a := clampf(boss_intro_text_timer / 1.5, 0.0, 1.0)
+			draw_string(_hud_font, Vector2(W * 0.3, H * 0.35), "\"Beware the baobabs!\"", HORIZONTAL_ALIGNMENT_CENTER, int(W * 0.4), 18, Color(1.0, 0.8, 0.3, intro_a * 0.7))
+
 	# Fox companion glow
 	if fox_active and fox_sprite and is_instance_valid(fox_sprite):
 		var fox_glow := 0.08 + sin(play_time * 4.0) * 0.04
@@ -2164,8 +2584,11 @@ func _draw_hud_panel() -> void:
 		draw_rect(Rect2(wp_x, 24, 140, 14), Color(0.08, 0.35 * rp, 0.15 * rp, 0.35))
 		draw_string(font, Vector2(wp_x + 148, 38), "READY", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.3, 1.0, 0.6, rp))
 
-	# Storm / status line
-	if meteor_storm:
+	# Storm / boss status line
+	if boss_state == BossState.FIGHTING or boss_state == BossState.ENTERING:
+		var bp2 := 0.5 + sin(t * 4.0) * 0.5
+		draw_string(font, Vector2(wp_x, 58), "!! BOSS !!", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.8, 0.3, 0.1, bp2))
+	elif meteor_storm:
 		var wp2 := 0.5 + sin(t * 6.0) * 0.5
 		draw_string(font, Vector2(wp_x, 58), "!! STORM !!", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.2, 0.1, wp2))
 
@@ -2496,6 +2919,46 @@ func _synth_sfx(t: float, type: String) -> float:
 			# Low drone underneath
 			value += sin(TAU * 55.0 * t) * env * 0.1
 			if t > 1.2: _sfx_playing = false
+		"boss_enter":
+			# Ominous rumble with rising dread tone
+			var env := clampf(1.0 - t / 1.5, 0.0, 1.0)
+			# Deep rumble
+			value = sin(TAU * 45.0 * t) * env * 0.25
+			value += sin(TAU * 55.0 * t) * env * 0.15
+			# Rising dread tone
+			var dread_freq := 100.0 + t * 300.0
+			value += sin(TAU * dread_freq * t) * env * 0.12
+			# Metallic clang
+			if t < 0.1:
+				value += sin(TAU * 800.0 * t) * (1.0 - t / 0.1) * 0.2
+			if t > 1.5: _sfx_playing = false
+		"boss_dying":
+			# Extended crumbling destruction
+			var env := clampf(1.0 - t / 2.0, 0.0, 1.0)
+			# Descending roar
+			var freq := 200.0 - t * 80.0
+			value = sin(TAU * freq * t) * env * 0.3
+			# Crumble noise
+			value += (randf() * 2.0 - 1.0) * env * 0.12
+			# Periodic explosions
+			if fmod(t, 0.3) < 0.05:
+				value += sin(TAU * 100.0 * t) * 0.2
+			if t > 2.0: _sfx_playing = false
+		"boss_die":
+			# Triumphant explosion — major chord with sparkle
+			var env := clampf(1.0 - t / 1.0, 0.0, 1.0)
+			env = sqrt(env)
+			value = sin(TAU * 523.25 * t) * env * 0.15  # C5
+			value += sin(TAU * 659.25 * t) * env * 0.12  # E5
+			value += sin(TAU * 784.0 * t) * env * 0.1    # G5
+			value += sin(TAU * 1046.5 * t) * env * 0.06  # C6
+			# Sparkle
+			if fmod(t, 0.1) < 0.02:
+				value += sin(TAU * 3500.0 * t) * env * 0.06
+			# Boom underneath
+			if t < 0.15:
+				value += sin(TAU * 60.0 * t) * (1.0 - t / 0.15) * 0.3
+			if t > 1.0: _sfx_playing = false
 	return value
 
 func _synth_sfx2(t: float, type: String) -> float:
@@ -2574,6 +3037,17 @@ func _synth_sfx2(t: float, type: String) -> float:
 			var env := clampf(1.0 - t / 0.2, 0.0, 1.0)
 			value = sin(TAU * 400.0 * t * (1.0 - t)) * env * 0.15
 			if t > 0.2: _sfx2_playing = false
+		"boss_attack":
+			# Menacing whoosh + creak (tree throwing projectiles)
+			var env := clampf(1.0 - t / 0.25, 0.0, 1.0)
+			var freq := 180.0 + t * 500.0
+			value = sin(TAU * freq * t) * env * 0.2
+			# Wood creak
+			value += sin(TAU * 120.0 * t * (1.0 + sin(t * 50.0) * 0.3)) * env * 0.1
+			# Impact whoosh
+			if t < 0.04:
+				value += (randf() * 2.0 - 1.0) * 0.15
+			if t > 0.25: _sfx2_playing = false
 		_:
 			_sfx2_playing = false
 	return value
