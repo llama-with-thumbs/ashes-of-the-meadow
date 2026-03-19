@@ -25,12 +25,7 @@ var sheep_speed: float = 280.0
 var sheep_hitbox: float = 15.0
 const SHEEP_ACCEL: float = 1800.0
 const SHEEP_DECEL: float = 12.0
-var sheep_frames_neutral: Array[ImageTexture] = []
-var sheep_frames_up: Array[ImageTexture] = []
-var sheep_frames_down: Array[ImageTexture] = []
-var sheep_frames: Array[ImageTexture] = []  # Current active set
-var sheep_frame_idx: int = 0
-var sheep_anim_timer: float = 0.0
+var sheep_tex: Texture2D  # Loaded from PNG
 var sheep_dir: int = 0  # 0=neutral, 1=up, 2=down
 var lives: int = 3
 const MAX_LIVES: int = 5
@@ -124,7 +119,7 @@ var boss_phase: int = 0  # 0, 1, 2 — attack phases based on HP
 var boss_attack_timer: float = 0.0
 var boss_move_timer: float = 0.0
 var boss_sprite: Sprite2D = null
-var boss_sprite_tex: ImageTexture
+var boss_sprite_tex: Texture2D
 var boss_barb_tex: ImageTexture
 var boss_tv_tex: ImageTexture
 var boss_projectiles: Array = []  # {pos, vel, type, rot, rot_speed, life}
@@ -299,10 +294,13 @@ var _item_particle_colors: Dictionary = {
 # ─── Lifecycle ───
 
 func _ready() -> void:
-	sheep_frames_neutral = [RetroSprites.generate_pixel_sheep(0, 0), RetroSprites.generate_pixel_sheep(1, 0)]
-	sheep_frames_up = [RetroSprites.generate_pixel_sheep(0, 1), RetroSprites.generate_pixel_sheep(1, 1)]
-	sheep_frames_down = [RetroSprites.generate_pixel_sheep(0, 2), RetroSprites.generate_pixel_sheep(1, 2)]
-	sheep_frames = sheep_frames_neutral
+	var sheep_res: Texture2D = load("res://assets/sprites/sheep_minigame.png")
+	var sheep_img: Image = sheep_res.get_image()
+	# Downscale to ~48px tall for pixelated retro look, then display scaled up with NEAREST
+	var sheep_pixel_h: int = 48
+	var sheep_pixel_w: int = int(float(sheep_img.get_width()) / float(sheep_img.get_height()) * sheep_pixel_h)
+	sheep_img.resize(sheep_pixel_w, sheep_pixel_h, Image.INTERPOLATE_LANCZOS)
+	sheep_tex = ImageTexture.create_from_image(sheep_img)
 	heart_full_tex = RetroSprites.generate_heart()
 	heart_empty_tex = RetroSprites.generate_heart_empty()
 	for ct in COLLECT_TYPES:
@@ -326,7 +324,13 @@ func _ready() -> void:
 	item_sprites["rose"] = rose_sprite_tex
 
 	# Boss sprites
-	boss_sprite_tex = RetroSprites.generate_boss_baobab()
+	var boss_res: Texture2D = load("res://assets/sprites/boss_baobab_clean.png")
+	var boss_img: Image = boss_res.get_image()
+	# Downscale to ~80px tall for pixelated retro look
+	var boss_pixel_h: int = 80
+	var boss_pixel_w: int = int(float(boss_img.get_width()) / float(boss_img.get_height()) * boss_pixel_h)
+	boss_img.resize(boss_pixel_w, boss_pixel_h, Image.INTERPOLATE_LANCZOS)
+	boss_sprite_tex = ImageTexture.create_from_image(boss_img)
 	boss_barb_tex = RetroSprites.generate_barbed_wire()
 	boss_tv_tex = RetroSprites.generate_tv_set()
 
@@ -357,9 +361,11 @@ func _build_hud() -> void:
 	_hud_font = ThemeDB.fallback_font
 
 	sheep_sprite = Sprite2D.new()
-	sheep_sprite.texture = sheep_frames[0]
+	sheep_sprite.texture = sheep_tex
 	sheep_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	sheep_sprite.scale = Vector2(1.9, 1.9)
+	# Scale pixelated sprite up to ~55px display size
+	var sheep_scale_f: float = 55.0 / sheep_tex.get_height()
+	sheep_sprite.scale = Vector2(sheep_scale_f, sheep_scale_f)
 	sheep_sprite.z_index = 20
 	add_child(sheep_sprite)
 
@@ -687,7 +693,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					_fire_sound_wave()
 					wave_charging = false
 		if event.pressed and event.keycode == KEY_ESCAPE:
-			get_tree().change_scene_to_file("res://scenes/main.tscn")
+			get_tree().quit()
 
 # ─── Main Loop ───
 
@@ -742,12 +748,8 @@ func _process(delta: float) -> void:
 			var title_time: float = Time.get_ticks_msec() / 1000.0
 			sheep_sprite.position = sheep_pos + Vector2(sin(title_time * 0.8) * 15.0, sin(title_time * 1.2) * 10.0)
 			sheep_sprite.rotation = sin(title_time * 0.5) * 0.08
-			# Animate leg frames
-			sheep_anim_timer += delta
-			if sheep_anim_timer > 0.3:
-				sheep_anim_timer -= 0.3
-				sheep_frame_idx = (sheep_frame_idx + 1) % sheep_frames.size()
-				sheep_sprite.texture = sheep_frames[sheep_frame_idx]
+			# Gentle bob for single-image sprite
+			sheep_sprite.scale = Vector2.ONE * (55.0 / sheep_tex.get_height()) * (1.0 + sin(title_time * 2.0) * 0.02)
 		queue_redraw()
 		return
 	if state == State.GAMEOVER:
@@ -878,19 +880,7 @@ func _process(delta: float) -> void:
 		new_dir = 1  # Up
 	elif sheep_velocity.y > 60.0:
 		new_dir = 2  # Down
-	if new_dir != sheep_dir:
-		sheep_dir = new_dir
-		match sheep_dir:
-			0: sheep_frames = sheep_frames_neutral
-			1: sheep_frames = sheep_frames_up
-			2: sheep_frames = sheep_frames_down
-		sheep_sprite.texture = sheep_frames[sheep_frame_idx % sheep_frames.size()]
-
-	sheep_anim_timer += delta
-	if sheep_anim_timer > 0.2:
-		sheep_anim_timer -= 0.2
-		sheep_frame_idx = (sheep_frame_idx + 1) % sheep_frames.size()
-		sheep_sprite.texture = sheep_frames[sheep_frame_idx]
+	sheep_dir = new_dir
 
 	if invincible > 0:
 		invincible -= delta
@@ -1723,7 +1713,8 @@ func _start_boss() -> void:
 	boss_sprite = Sprite2D.new()
 	boss_sprite.texture = boss_sprite_tex
 	boss_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	boss_sprite.scale = Vector2(2.5, 2.5)
+	var boss_scale_f: float = 200.0 / boss_sprite_tex.get_height()
+	boss_sprite.scale = Vector2(boss_scale_f, boss_scale_f)
 	boss_sprite.z_index = 25
 	add_child(boss_sprite)
 
@@ -1833,8 +1824,9 @@ func _update_boss(game_delta: float, delta: float) -> void:
 		else:
 			boss_sprite.modulate = Color.WHITE
 		# Subtle breathing pulse
+		var boss_base_scale: float = 200.0 / boss_sprite_tex.get_height()
 		var breath := 1.0 + sin(boss_move_timer * 2.0) * 0.03
-		boss_sprite.scale = Vector2(2.5 * breath, 2.5 * breath)
+		boss_sprite.scale = Vector2(boss_base_scale * breath, boss_base_scale * breath)
 
 	# Attack patterns
 	boss_attack_timer -= delta
@@ -2116,7 +2108,7 @@ func _draw() -> void:
 		gs_alpha *= 0.12  # Very faint
 		var gp: Vector2 = gs.pos + shake_offset
 		# Draw ghostly sheep silhouette
-		draw_texture_rect(sheep_frames_neutral[gs.frame], Rect2(gp.x - 22, gp.y - 22, 44, 44), false, Color(0.7, 0.75, 1.0, gs_alpha))
+		draw_texture_rect(sheep_tex, Rect2(gp.x - 22, gp.y - 22, 44, 44), false, Color(0.7, 0.75, 1.0, gs_alpha))
 
 	# Whisper words (single words fading through space)
 	if state == State.PLAYING:
