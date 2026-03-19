@@ -2297,23 +2297,48 @@ func _draw() -> void:
 		draw_circle(bp, 50.0, Color(aura_col.r, aura_col.g, aura_col.b, aura_col.a * 0.5))
 		# Danger ring
 		draw_arc(bp, 55.0, 0, TAU, 32, Color(aura_col.r, aura_col.g, aura_col.b, aura_col.a * 3.0), 1.5)
-		# Boss HP bar (above boss)
-		if boss_state == BossState.FIGHTING:
-			var bar_w := 100.0
-			var bar_h := 8.0
-			var bar_x := bp.x - bar_w / 2.0
-			var bar_y := bp.y - 70.0
-			# Background
-			draw_rect(Rect2(bar_x - 1, bar_y - 1, bar_w + 2, bar_h + 2), Color(0.05, 0.05, 0.1, 0.8))
+		# Boss HP bar — large, fixed at bottom of screen
+		if boss_state == BossState.FIGHTING or boss_state == BossState.ENTERING:
+			var bar_w := 500.0
+			var bar_h := 18.0
+			var bar_x := (W - bar_w) / 2.0
+			var bar_y := H - 40.0
+			# Dark panel background
+			draw_rect(Rect2(bar_x - 8, bar_y - 22, bar_w + 16, bar_h + 28), Color(0.03, 0.025, 0.07, 0.92))
+			# Beveled border
+			draw_rect(Rect2(bar_x - 8, bar_y - 22, bar_w + 16, 2), Color(0.5, 0.4, 0.3, 0.6))
+			draw_rect(Rect2(bar_x - 8, bar_y + bar_h + 4, bar_w + 16, 2), Color(0.15, 0.1, 0.08, 0.8))
+			# Bar background
+			draw_rect(Rect2(bar_x - 1, bar_y - 1, bar_w + 2, bar_h + 2), Color(0.1, 0.08, 0.05, 0.9))
 			# HP fill
 			var hp_frac: float = clampf(float(boss_hp) / float(boss_max_hp), 0.0, 1.0)
-			var hp_col := Color(0.2, 0.9, 0.3, 0.9) if hp_frac > 0.5 else (Color(1.0, 0.8, 0.1, 0.9) if hp_frac > 0.25 else Color(1.0, 0.2, 0.1, 0.9))
-			draw_rect(Rect2(bar_x, bar_y, bar_w * hp_frac, bar_h), hp_col)
-			# Border
-			draw_rect(Rect2(bar_x - 1, bar_y - 1, bar_w + 2, 1), Color(0.5, 0.45, 0.6, 0.6))
-			draw_rect(Rect2(bar_x - 1, bar_y + bar_h, bar_w + 2, 1), Color(0.2, 0.15, 0.3, 0.6))
-			# Boss name
-			draw_string(_hud_font, Vector2(bar_x, bar_y - 5), "THE BAOBAB", HORIZONTAL_ALIGNMENT_LEFT, int(bar_w), 12, Color(0.8, 0.7, 0.3, 0.8))
+			var hp_col := Color(0.2, 0.9, 0.3, 0.95)
+			if hp_frac <= 0.25:
+				hp_col = Color(1.0, 0.2, 0.1, 0.95)
+			elif hp_frac <= 0.5:
+				hp_col = Color(1.0, 0.8, 0.1, 0.95)
+			var fill_w: float = bar_w * hp_frac
+			draw_rect(Rect2(bar_x, bar_y, fill_w, bar_h), hp_col)
+			# Bright highlight on top of fill
+			if fill_w > 2:
+				draw_rect(Rect2(bar_x, bar_y, fill_w, 3), Color(hp_col.r + 0.2, hp_col.g + 0.1, hp_col.b + 0.1, 0.4))
+			# Pulse glow at fill edge
+			if fill_w > 4:
+				var pulse_a := 0.3 + sin(play_time * 6.0) * 0.2
+				draw_rect(Rect2(bar_x + fill_w - 3, bar_y, 3, bar_h), Color(1.0, 1.0, 1.0, pulse_a))
+			# Segment lines
+			for seg_i in 10:
+				var seg_x: float = bar_x + bar_w * float(seg_i) / 10.0
+				draw_rect(Rect2(seg_x, bar_y, 1, bar_h), Color(0.0, 0.0, 0.0, 0.25))
+			# Corner rivets
+			for cx in [bar_x - 4.0, bar_x + bar_w + 4.0]:
+				for cy in [bar_y - 18.0, bar_y + bar_h + 2.0]:
+					draw_circle(Vector2(cx, cy), 2.5, Color(0.35, 0.3, 0.25, 0.5))
+					draw_circle(Vector2(cx, cy), 1.2, Color(0.6, 0.5, 0.4, 0.4))
+			# Boss name label
+			draw_string(_hud_font, Vector2(bar_x, bar_y - 6), "THE BAOBAB", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.9, 0.75, 0.3, 0.95))
+			# HP text on right
+			draw_string(_hud_font, Vector2(bar_x + bar_w, bar_y - 6), "%d / %d" % [boss_hp, boss_max_hp], HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color(0.8, 0.7, 0.6, 0.8))
 		# Root tendrils (animated wavy lines from boss)
 		if boss_state == BossState.FIGHTING:
 			for ri in 4:
