@@ -16,12 +16,14 @@ A retro arcade side-scroller where a rocket-powered sheep in a spacesuit dodges 
 
 ### Features
 
-- Procedural FM synthesis audio — no audio files needed
+- Original looping soundtrack
+- Hand-drawn pixel art sprites (sheep, boss) with retro nearest-neighbor filtering
 - Boss fight with multiple attack phases (barbed wire, TVs, spiral patterns)
 - Power-ups: shields, magnets, slow-mo, golden stars
 - Little Prince-themed collectibles (roses, foxes, tiny planets)
 - Smooth movement with acceleration, near-miss bullet time, screen shake
 - CRT scanlines, twinkling stars, particle effects
+- Procedural SFX via FM synthesis
 
 ### Standalone Build
 

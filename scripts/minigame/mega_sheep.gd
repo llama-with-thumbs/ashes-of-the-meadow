@@ -178,6 +178,7 @@ var bass_player: AudioStreamPlayer
 var drum_player: AudioStreamPlayer
 var sfx_player: AudioStreamPlayer
 var sfx_player2: AudioStreamPlayer  # Second SFX channel for overlapping sounds
+var music_player: AudioStreamPlayer
 
 var _fm_time: float = 0.0
 var _bass_time: float = 0.0
@@ -402,11 +403,18 @@ func _build_hud() -> void:
 	add_child(results_label)
 
 func _setup_audio() -> void:
-	fm_player = _make_audio_player(-6.0)
-	bass_player = _make_audio_player(-2.0)
-	drum_player = _make_audio_player(-4.0)
 	sfx_player = _make_audio_player(0.0, 0.5)
 	sfx_player2 = _make_audio_player(-2.0, 0.5)
+
+	# Background music
+	music_player = AudioStreamPlayer.new()
+	var music_stream: AudioStreamOggVorbis = load("res://assets/audio/music.ogg")
+	music_player.stream = music_stream
+	music_player.volume_db = -8.0
+	music_player.bus = &"Master"
+	add_child(music_player)
+	music_player.play()
+	music_player.finished.connect(func(): music_player.play())  # Loop
 
 func _make_audio_player(vol: float, buf: float = 1.0) -> AudioStreamPlayer:
 	var p := AudioStreamPlayer.new()
@@ -698,9 +706,7 @@ func _unhandled_input(event: InputEvent) -> void:
 # ─── Main Loop ───
 
 func _process(delta: float) -> void:
-	_fill_fm_buffer()
-	_fill_bass_buffer()
-	_fill_drum_buffer()
+	# SFX only — background music is handled by music_player
 	_fill_sfx_buffer()
 	_fill_sfx2_buffer()
 
