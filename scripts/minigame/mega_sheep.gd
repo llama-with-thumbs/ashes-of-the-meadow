@@ -15,7 +15,7 @@ var state: State = State.TITLE
 
 const W: float = 1280.0
 const H: float = 720.0
-const HUD_H: float = 64.0  # Top panel height
+const HUD_H: float = 82.0  # Top panel height
 
 # ─── Player ───
 
@@ -166,10 +166,13 @@ var heart_full_tex: ImageTexture
 var heart_empty_tex: ImageTexture
 var wave_label: Label
 var title_label: Label
+var title_logo_tex: Texture2D
 var results_label: Label
 var item_sprites: Dictionary = {}
 var point_popups: Array = []
 var _hud_font: Font
+var _pixel_font: Font  # Press Start 2P — labels, small text
+var _tech_font: Font   # Orbitron — numbers, values
 
 # ─── Audio ───
 
@@ -295,6 +298,7 @@ var _item_particle_colors: Dictionary = {
 # ─── Lifecycle ───
 
 func _ready() -> void:
+	title_logo_tex = load("res://assets/sprites/title_logo.png")
 	var sheep_res: Texture2D = load("res://assets/sprites/sheep_minigame.png")
 	var sheep_img: Image = sheep_res.get_image()
 	# Downscale to ~48px tall for pixelated retro look, then display scaled up with NEAREST
@@ -360,12 +364,14 @@ func _build_stars() -> void:
 
 func _build_hud() -> void:
 	_hud_font = ThemeDB.fallback_font
+	_pixel_font = load("res://assets/fonts/PressStart2P.ttf")
+	_tech_font = load("res://assets/fonts/Orbitron.ttf")
 
 	sheep_sprite = Sprite2D.new()
 	sheep_sprite.texture = sheep_tex
 	sheep_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	# Scale pixelated sprite up to ~55px display size
-	var sheep_scale_f: float = 55.0 / sheep_tex.get_height()
+	var sheep_scale_f: float = 80.0 / sheep_tex.get_height()
 	sheep_sprite.scale = Vector2(sheep_scale_f, sheep_scale_f)
 	sheep_sprite.z_index = 20
 	add_child(sheep_sprite)
@@ -432,8 +438,7 @@ func _make_audio_player(vol: float, buf: float = 1.0) -> AudioStreamPlayer:
 
 func _show_title() -> void:
 	state = State.TITLE
-	title_label.text = "M E G A   S H E E P\n\n\nDrift through the ruins. Collect what remains.\nDodge the meteors. Destroy them with sound.\n\nSPACE — Fire sound wave (hold to charge!)\nGolden stars grant extra lives.\nShields, Magnets, Slow-mo & Combos!\n\n\nArrow Keys / WASD to move\n\nPress SPACE to launch\nPress ESC to return"
-	title_label.visible = true
+	title_label.visible = false  # We draw title manually now
 	results_label.visible = false
 	wave_label.visible = false
 	# Show sheep floating on title screen
@@ -755,7 +760,7 @@ func _process(delta: float) -> void:
 			sheep_sprite.position = sheep_pos + Vector2(sin(title_time * 0.8) * 15.0, sin(title_time * 1.2) * 10.0)
 			sheep_sprite.rotation = sin(title_time * 0.5) * 0.08
 			# Gentle bob for single-image sprite
-			sheep_sprite.scale = Vector2.ONE * (55.0 / sheep_tex.get_height()) * (1.0 + sin(title_time * 2.0) * 0.02)
+			sheep_sprite.scale = Vector2.ONE * (80.0 / sheep_tex.get_height()) * (1.0 + sin(title_time * 2.0) * 0.02)
 		queue_redraw()
 		return
 	if state == State.GAMEOVER:
@@ -1703,7 +1708,7 @@ func _collect_item(type: String, score_val: int) -> void:
 
 func _start_boss() -> void:
 	boss_state = BossState.ENTERING
-	boss_hp = 20 + wave * 5
+	boss_hp = 20
 	boss_max_hp = boss_hp
 	boss_phase = 0
 	boss_pos = Vector2(W + 80, H * 0.5)
@@ -2453,58 +2458,153 @@ func _draw() -> void:
 			draw_rect(Rect2(i, HUD_H, 1, H - HUD_H), Color(0.0, 0.0, 0.0, vig_a))
 			draw_rect(Rect2(W - 1 - i, HUD_H, 1, H - HUD_H), Color(0.0, 0.0, 0.0, vig_a))
 
+	# 90s arcade title screen
+	if state == State.TITLE:
+		_draw_title_screen()
+
 	# HUD Panel (drawn last, on top of everything)
 	if state == State.PLAYING or state == State.GAMEOVER:
 		_draw_hud_panel()
+
+# ─── Title Screen (90s arcade style) ───
+
+func _draw_title_screen() -> void:
+	var font := _pixel_font
+	var tf := _tech_font
+	var t := Time.get_ticks_msec() / 1000.0
+
+	# Dark overlay for readability
+	draw_rect(Rect2(0, 0, W, H), Color(0.0, 0.0, 0.05, 0.5))
+
+	# === MEGA SHEEP logo image — with subtle pulse and glow ===
+	var logo_h := 180.0
+	var logo_w := logo_h * (float(title_logo_tex.get_width()) / float(title_logo_tex.get_height()))
+	var logo_pulse := 1.0 + sin(t * 1.5) * 0.02
+	var logo_x := W / 2.0 - (logo_w * logo_pulse) / 2.0
+	var logo_y := 15.0
+
+	# Glow behind logo
+	var glow_rect := Rect2(logo_x - 10, logo_y - 5, logo_w * logo_pulse + 20, logo_h * logo_pulse + 10)
+	draw_texture_rect(title_logo_tex, glow_rect, false, Color(1.0, 0.6, 0.2, 0.12 + sin(t * 2.0) * 0.04))
+
+	# Main logo
+	var logo_rect := Rect2(logo_x, logo_y, logo_w * logo_pulse, logo_h * logo_pulse)
+	draw_texture_rect(title_logo_tex, logo_rect, false)
+
+	# === Subtitle ===
+	var sub_pulse := 0.6 + sin(t * 1.5) * 0.2
+	draw_string(font, Vector2(W / 2.0 - 250.0 + 1, 211), "DRIFT THROUGH THE RUINS", HORIZONTAL_ALIGNMENT_CENTER, 500, 10, Color(0.0, 0.0, 0.0, 0.6))
+	draw_string(font, Vector2(W / 2.0 - 250.0, 210), "DRIFT THROUGH THE RUINS", HORIZONTAL_ALIGNMENT_CENTER, 500, 10, Color(0.7, 0.8, 1.0, sub_pulse))
+
+	# === Controls section ===
+	var cy := 300.0
+	var controls := [
+		["WASD / ARROWS", "MOVE"],
+		["SPACE", "FIRE SOUND WAVE"],
+		["HOLD SPACE", "CHARGE BLAST"],
+		["ESC", "QUIT"],
+	]
+
+	# Controls header
+	draw_string(font, Vector2(W / 2.0 - 150.0 + 1, cy - 25 + 1), "CONTROLS", HORIZONTAL_ALIGNMENT_CENTER, 300, 10, Color(0.0, 0.0, 0.0, 0.5))
+	draw_string(font, Vector2(W / 2.0 - 150.0, cy - 25), "CONTROLS", HORIZONTAL_ALIGNMENT_CENTER, 300, 10, Color(0.2, 1.0, 0.8, 0.9))
+
+	for i in controls.size():
+		var row_y := cy + i * 28.0
+		# Key — tech font
+		draw_string(tf, Vector2(W / 2.0 - 180.0, row_y), controls[i][0], HORIZONTAL_ALIGNMENT_RIGHT, 170, 16, Color(1.0, 0.9, 0.3, 0.95))
+		# Separator
+		draw_string(font, Vector2(W / 2.0 - 5.0, row_y), "-", HORIZONTAL_ALIGNMENT_CENTER, 20, 8, Color(0.5, 0.5, 0.6, 0.5))
+		# Action — pixel font
+		draw_string(font, Vector2(W / 2.0 + 15.0, row_y), controls[i][1], HORIZONTAL_ALIGNMENT_LEFT, 250, 8, Color(0.9, 0.85, 0.95, 0.8))
+
+	# === Power-ups section ===
+	var py := 440.0
+	draw_string(font, Vector2(W / 2.0 - 150.0 + 1, py + 1), "POWER UPS", HORIZONTAL_ALIGNMENT_CENTER, 300, 10, Color(0.0, 0.0, 0.0, 0.5))
+	draw_string(font, Vector2(W / 2.0 - 150.0, py), "POWER UPS", HORIZONTAL_ALIGNMENT_CENTER, 300, 10, Color(1.0, 0.4, 0.6, 0.9))
+
+	var powers := ["SHIELDS", "MAGNETS", "SLOW-MO", "COMBOS", "STARS"]
+	var power_cols := [
+		Color(0.3, 0.9, 1.0), Color(1.0, 0.3, 0.5), Color(0.6, 0.3, 1.0),
+		Color(1.0, 0.8, 0.2), Color(1.0, 0.95, 0.4),
+	]
+	var pw_x := W / 2.0 - 230.0
+	for i in powers.size():
+		var blink := 1.0 if fmod(t + i * 0.3, 2.0) > 0.15 else 0.3
+		draw_string(font, Vector2(pw_x + i * 95.0, py + 28), powers[i], HORIZONTAL_ALIGNMENT_CENTER, 93, 8, Color(power_cols[i].r, power_cols[i].g, power_cols[i].b, 0.85 * blink))
+
+	# === "Press SPACE to launch" — pixel font, blinking ===
+	var blink_alpha := 0.4 + sin(t * 3.0) * 0.4
+	var launch_y := 550.0
+	# Shadow
+	draw_string(font, Vector2(W / 2.0 - 200.0 + 2, launch_y + 2), "PRESS SPACE TO LAUNCH", HORIZONTAL_ALIGNMENT_CENTER, 400, 12, Color(0.0, 0.0, 0.0, blink_alpha * 0.6))
+	# Main
+	draw_string(font, Vector2(W / 2.0 - 200.0, launch_y), "PRESS SPACE TO LAUNCH", HORIZONTAL_ALIGNMENT_CENTER, 400, 12, Color(1.0, 1.0, 1.0, blink_alpha))
+
+	# === Decorative corner lines ===
+	var line_a := 0.3 + sin(t * 1.0) * 0.1
+	# Top corners
+	draw_line(Vector2(60, 65), Vector2(200, 65), Color(1.0, 0.5, 0.0, line_a), 2.0)
+	draw_line(Vector2(60, 65), Vector2(60, 120), Color(1.0, 0.5, 0.0, line_a), 2.0)
+	draw_line(Vector2(W - 60, 65), Vector2(W - 200, 65), Color(0.0, 0.8, 1.0, line_a), 2.0)
+	draw_line(Vector2(W - 60, 65), Vector2(W - 60, 120), Color(0.0, 0.8, 1.0, line_a), 2.0)
+	# Bottom corners
+	draw_line(Vector2(60, 580), Vector2(200, 580), Color(0.0, 1.0, 0.5, line_a), 2.0)
+	draw_line(Vector2(60, 580), Vector2(60, 540), Color(0.0, 1.0, 0.5, line_a), 2.0)
+	draw_line(Vector2(W - 60, 580), Vector2(W - 200, 580), Color(1.0, 0.3, 0.8, line_a), 2.0)
+	draw_line(Vector2(W - 60, 580), Vector2(W - 60, 540), Color(1.0, 0.3, 0.8, line_a), 2.0)
 
 # ─── HUD Panel (retro Mega Drive style) ───
 
 func _draw_hud_panel() -> void:
 	var ph := HUD_H
-	var font := _hud_font
+	var pf := _pixel_font  # Labels
+	var tf := _tech_font    # Numbers/values
 	var t := play_time
 
-	# ── Panel background ──
-	draw_rect(Rect2(0, 0, W, ph), Color(0.03, 0.025, 0.07, 0.96))
+	# ── Panel background — deep purple gradient feel ──
+	draw_rect(Rect2(0, 0, W, ph), Color(0.03, 0.01, 0.08, 0.97))
+	# Subtle inner gradient strips
+	for i in range(0, int(ph), 2):
+		var ga := 0.02 + sin(float(i) * 0.15) * 0.01
+		draw_rect(Rect2(0, i, W, 1), Color(0.15, 0.05, 0.25, ga))
 
-	# Beveled border — metallic 3D look
-	draw_rect(Rect2(0, 0, W, 2), Color(0.5, 0.45, 0.6, 0.8))
-	draw_rect(Rect2(0, 2, W, 1), Color(0.3, 0.27, 0.4, 0.6))
-	draw_rect(Rect2(0, ph - 2, W, 2), Color(0.1, 0.08, 0.15, 0.9))
-	# Neon accent at bottom
-	draw_rect(Rect2(0, ph - 3, W, 1), Color(0.35, 0.15, 0.65, 0.45))
+	# Top neon line — hot pink/magenta
+	draw_rect(Rect2(0, 0, W, 3), Color(0.8, 0.1, 0.6, 0.8))
+	draw_rect(Rect2(0, 3, W, 1), Color(0.4, 0.05, 0.3, 0.4))
+	# Bottom neon line — cyan
+	draw_rect(Rect2(0, ph - 3, W, 3), Color(0.0, 0.85, 0.7, 0.6))
+	draw_rect(Rect2(0, ph - 1, W, 1), Color(0.0, 1.0, 0.9, 0.35))
 
-	# Corner rivets
-	for cx in [12.0, W - 12.0]:
-		for cy in [12.0, ph - 12.0]:
-			draw_circle(Vector2(cx, cy), 3.5, Color(0.35, 0.3, 0.4, 0.5))
-			draw_circle(Vector2(cx, cy), 1.8, Color(0.6, 0.55, 0.65, 0.4))
+	# Corner rivets — glowing dots
+	for cx in [8.0, W - 8.0]:
+		for cy in [8.0, ph - 8.0]:
+			draw_circle(Vector2(cx, cy), 3.0, Color(0.8, 0.2, 0.6, 0.3))
+			draw_circle(Vector2(cx, cy), 1.5, Color(1.0, 0.6, 0.9, 0.5))
 
-	# ── Section separators ──
-	var sep1 := 240.0
-	var sep2 := 600.0
-	var sep3 := 920.0
-	for sx in [sep1, sep2, sep3]:
-		draw_rect(Rect2(sx, 5, 1, ph - 10), Color(0.35, 0.3, 0.45, 0.5))
-		draw_rect(Rect2(sx + 1, 5, 1, ph - 10), Color(0.08, 0.06, 0.12, 0.5))
+	# ── Section separators — glowing neon lines ──
+	var sep1 := 200.0
+	var sep2 := 520.0
+	var sep3 := 780.0
+	var sep4 := 1010.0
+	for sx in [sep1, sep2, sep3, sep4]:
+		draw_rect(Rect2(sx, 3, 2, ph - 6), Color(0.5, 0.2, 0.8, 0.35))
+		draw_rect(Rect2(sx - 1, 3, 1, ph - 6), Color(0.8, 0.3, 1.0, 0.1))
+		draw_rect(Rect2(sx + 2, 3, 1, ph - 6), Color(0.0, 0.0, 0.0, 0.3))
 
 	# ═══════════════════════════════════════════
-	# SECTION 1: Lives & Wave (0..sep1)
+	# SECTION 1: Lives (0..sep1)
 	# ═══════════════════════════════════════════
-	draw_string(font, Vector2(24, 20), "LIVES", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.6, 0.5, 0.75, 0.8))
+	# Pixel font label
+	draw_string(pf, Vector2(22, 18), "LIVES", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.8, 0.6, 1.0, 0.9))
 	for i in MAX_LIVES:
-		var hx := 24.0 + i * 28.0
-		var hy := 28.0
+		var hx := 22.0 + i * 32.0
+		var hy := 30.0
 		if i < lives:
-			draw_texture_rect(heart_full_tex, Rect2(hx, hy, 24, 24), false, Color.WHITE)
+			draw_texture_rect(heart_full_tex, Rect2(hx, hy, 30, 30), false, Color.WHITE)
 		else:
-			draw_texture_rect(heart_empty_tex, Rect2(hx, hy, 24, 24), false, Color(0.3, 0.3, 0.4, 0.4))
-
-	# Wave number
-	draw_string(font, Vector2(175, 20), "WAVE", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.6, 0.5, 0.75, 0.7))
-	draw_string(font, Vector2(175, 42), "%d" % wave, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(1.0, 0.85, 0.3, 1.0))
-
-	# Combo
+			draw_texture_rect(heart_empty_tex, Rect2(hx, hy, 30, 30), false, Color(0.2, 0.15, 0.3, 0.3))
+	# Combo — pixel font, flashing
 	if combo_count >= 2:
 		var pulse := 0.5 + sin(t * 8.0) * 0.5
 		var combo_col := Color(1.0, 0.5 + pulse * 0.3, 0.15, 1.0)
@@ -2512,108 +2612,106 @@ func _draw_hud_panel() -> void:
 			combo_col = Color(1.0, 0.3 + pulse * 0.3, 1.0, 1.0)
 		elif combo_count >= 5:
 			combo_col = Color(1.0, 0.8 + pulse * 0.2, 0.1, 1.0)
-		draw_string(font, Vector2(24, 58), "COMBO x%d" % combo_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, combo_col)
+		draw_string(pf, Vector2(22, 74), "COMBO x%d" % combo_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, combo_col)
 
 	# ═══════════════════════════════════════════
-	# SECTION 2: Score & stats (sep1..sep2)
+	# SECTION 2: Wave (sep1..sep2)
 	# ═══════════════════════════════════════════
-	draw_string(font, Vector2(sep1 + 16, 18), "SCORE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.5, 0.45, 0.65, 0.7))
-	# Smooth score counter with flash when gaining points
+	draw_string(pf, Vector2(sep1 + 18, 18), "WAVE", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.8, 0.6, 1.0, 0.85))
+	# Big wave number — tech font, golden
+	draw_string(tf, Vector2(sep1 + 18, 62), "%d" % wave, HORIZONTAL_ALIGNMENT_LEFT, -1, 40, Color(1.0, 0.85, 0.1, 1.0))
+
+	# ═══════════════════════════════════════════
+	# SECTION 3: Score (sep2..sep3)
+	# ═══════════════════════════════════════════
+	# "SCORE" in pixel font — red/orange
+	draw_string(pf, Vector2(sep2 + 18, 18), "SCORE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1.0, 0.25, 0.3, 0.95))
 	var display_score := int(score_display)
 	var score_catching_up: bool = score_display < float(score) - 5.0
-	var score_col := Color(0.1, 1.0, 0.8, 1.0)
+	var score_col := Color(0.1, 1.0, 0.65, 1.0)
 	if score_catching_up:
-		score_col = Color(0.3, 1.0, 0.5, 1.0)  # Brighter while counting up
-	draw_string(font, Vector2(sep1 + 16, 40), "%d" % display_score, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, score_col)
-	draw_string(font, Vector2(sep1 + 16, 58), "HI %d" % high_score, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.75, 0.55, 0.2, 0.6))
+		score_col = Color(0.3, 1.0, 0.4, 1.0)
+	# Big score number — tech font, neon green
+	draw_string(tf, Vector2(sep2 + 18, 62), "%d" % display_score, HORIZONTAL_ALIGNMENT_LEFT, -1, 40, score_col)
 
+	# ═══════════════════════════════════════════
+	# SECTION 4: Stats & Power-ups (sep3..sep4)
+	# ═══════════════════════════════════════════
+	var st_x := sep3 + 14.0
+	# Distance — tech font, purple
+	draw_string(tf, Vector2(st_x, 22), "%dm" % int(distance), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.75, 0.55, 1.0, 0.95))
+	# Time — tech font, cyan
 	var mins := int(t) / 60
 	var secs := int(t) % 60
-	draw_string(font, Vector2(sep2 - 16, 20), "%dm" % int(distance), HORIZONTAL_ALIGNMENT_RIGHT, -1, 15, Color(0.6, 0.5, 0.85, 0.9))
-	draw_string(font, Vector2(sep2 - 16, 40), "%d:%02d" % [mins, secs], HORIZONTAL_ALIGNMENT_RIGHT, -1, 15, Color(1.0, 0.85, 0.3, 0.8))
-	if meteors_destroyed > 0:
-		draw_string(font, Vector2(sep2 - 16, 58), "KILLS %d" % meteors_destroyed, HORIZONTAL_ALIGNMENT_RIGHT, -1, 13, Color(1.0, 0.5, 0.3, 0.7))
+	draw_string(tf, Vector2(st_x, 44), "%02d:%02d" % [mins, secs], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.15, 0.9, 1.0, 0.85))
 
-	# ═══════════════════════════════════════════
-	# SECTION 3: Power-ups (sep2..sep3)
-	# ═══════════════════════════════════════════
-	var pu_x := sep2 + 16.0
-	var pu_y := 6.0
-	var bar_total := 90.0
-	var bar_h := 10.0
-	var any_pu := false
-
-	if shield_active:
-		any_pu = true
-		var bar_w := bar_total * clampf(shield_timer / 12.0, 0.0, 1.0)
-		draw_string(font, Vector2(pu_x, pu_y + 14), "SHIELD", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.4, 0.9, 1.0, 0.9))
-		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_total, bar_h), Color(0.12, 0.1, 0.18, 0.6))
-		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_w, bar_h), Color(0.3, 0.85, 1.0, 0.85))
-		if shield_timer < 3.0 and int(shield_timer * 4) % 2 == 0:
-			draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_w, bar_h), Color(1.0, 0.3, 0.3, 0.4))
-		draw_string(font, Vector2(pu_x + 160, pu_y + 14), "%.0fs" % shield_timer, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.4, 0.9, 1.0, 0.8))
-		pu_y += 18.0
-
-	if magnet_active:
-		any_pu = true
-		var bar_w := bar_total * clampf(magnet_timer / 10.0, 0.0, 1.0)
-		draw_string(font, Vector2(pu_x, pu_y + 14), "MAGNET", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1.0, 0.4, 0.6, 0.9))
-		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_total, bar_h), Color(0.12, 0.1, 0.18, 0.6))
-		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_w, bar_h), Color(1.0, 0.4, 0.6, 0.85))
-		draw_string(font, Vector2(pu_x + 160, pu_y + 14), "%.0fs" % magnet_timer, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1.0, 0.5, 0.7, 0.8))
-		pu_y += 18.0
-
-	if slowmo_active:
-		any_pu = true
-		var bar_w := bar_total * clampf(slowmo_timer / 6.0, 0.0, 1.0)
-		draw_string(font, Vector2(pu_x, pu_y + 14), "SLOW-MO", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.6, 0.3, 1.0, 0.9))
-		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_total, bar_h), Color(0.12, 0.1, 0.18, 0.6))
-		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_w, bar_h), Color(0.6, 0.3, 1.0, 0.85))
-		draw_string(font, Vector2(pu_x + 160, pu_y + 14), "%.0fs" % slowmo_timer, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.7, 0.4, 1.0, 0.8))
-		pu_y += 18.0
-
-	if fox_active:
-		any_pu = true
-		var fox_bar := bar_total * clampf(fox_timer / FOX_DURATION, 0.0, 1.0)
-		draw_string(font, Vector2(pu_x, pu_y + 14), "FOX", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1.0, 0.7, 0.2, 0.9))
-		draw_rect(Rect2(pu_x + 65, pu_y + 4, bar_total, bar_h), Color(0.12, 0.1, 0.18, 0.6))
-		draw_rect(Rect2(pu_x + 65, pu_y + 4, fox_bar, bar_h), Color(1.0, 0.7, 0.2, 0.85))
-
+	# Power-up status — pixel font
+	var any_pu := shield_active or magnet_active or slowmo_active or fox_active
 	if not any_pu:
-		draw_string(font, Vector2(pu_x, 38), "no power-ups", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.3, 0.28, 0.4, 0.35))
+		draw_string(pf, Vector2(st_x, 62), "NO POWER-UPS", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.15, 0.85, 0.4, 0.45))
+	else:
+		var pu_str := ""
+		if shield_active: pu_str += "SHIELD "
+		if magnet_active: pu_str += "MAGNET "
+		if slowmo_active: pu_str += "SLOW-MO "
+		if fox_active: pu_str += "FOX "
+		draw_string(pf, Vector2(st_x, 62), pu_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.15, 1.0, 0.45, 0.9))
+
+	# Kills — pixel font, orange
+	if meteors_destroyed > 0:
+		draw_string(pf, Vector2(st_x, 76), "KILLS %d" % meteors_destroyed, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(1.0, 0.5, 0.15, 0.9))
 
 	# ═══════════════════════════════════════════
-	# SECTION 4: Weapon (sep3..W)
+	# SECTION 5: Sound Wave weapon (sep4..W)
 	# ═══════════════════════════════════════════
-	var wp_x := sep3 + 16.0
-	draw_string(font, Vector2(wp_x, 18), "SOUND WAVE", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.5, 0.7, 0.9, 0.7))
+	var wp_x := sep4 + 12.0
+	# Label — pixel font
+	draw_string(pf, Vector2(wp_x, 18), "SOUND WAVE", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.5, 0.7, 0.95, 0.85))
+
+	# Charge bar — neon styled
+	var bar_x := wp_x
+	var bar_w_total := 150.0
+	var bar_h := 18.0
+	var bar_y := 28.0
+
+	# Bar background with border
+	draw_rect(Rect2(bar_x - 1, bar_y - 1, bar_w_total + 2, bar_h + 2), Color(0.3, 0.15, 0.5, 0.3))
+	draw_rect(Rect2(bar_x, bar_y, bar_w_total, bar_h), Color(0.05, 0.03, 0.1, 0.8))
 
 	if wave_charging:
-		var charge_pct := int(wave_charge * 100)
-		var bar_w := 140.0 * wave_charge
-		draw_rect(Rect2(wp_x, 24, 140, 14), Color(0.12, 0.1, 0.18, 0.6))
-		var charge_col := Color(0.3 + wave_charge * 0.7, 0.7 + wave_charge * 0.2, 1.0, 0.9)
-		draw_rect(Rect2(wp_x, 24, bar_w, 14), charge_col)
+		var bar_w := bar_w_total * wave_charge
+		var charge_col := Color(0.3 + wave_charge * 0.7, 0.6 + wave_charge * 0.3, 1.0, 0.9)
+		draw_rect(Rect2(bar_x, bar_y, bar_w, bar_h), charge_col)
+		# Highlight stripe
+		draw_rect(Rect2(bar_x, bar_y, bar_w, 3), Color(1.0, 1.0, 1.0, 0.2))
 		if bar_w > 3:
-			draw_rect(Rect2(wp_x + bar_w - 2, 24, 2, 14), Color(1.0, 1.0, 1.0, 0.5))
-		draw_string(font, Vector2(wp_x + 148, 38), "CHG %d%%" % charge_pct, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, charge_col)
+			draw_rect(Rect2(bar_x + bar_w - 2, bar_y, 2, bar_h), Color(1.0, 1.0, 1.0, 0.6))
 	elif wave_cooldown > 0:
 		var cd_frac := wave_cooldown / WAVE_COOLDOWN
-		draw_rect(Rect2(wp_x, 24, 140, 14), Color(0.12, 0.1, 0.18, 0.6))
-		draw_rect(Rect2(wp_x, 24, 140 * cd_frac, 14), Color(0.35, 0.3, 0.45, 0.5))
-		draw_string(font, Vector2(wp_x + 148, 38), "WAIT", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.45, 0.4, 0.55, 0.6))
+		draw_rect(Rect2(bar_x, bar_y, bar_w_total * cd_frac, bar_h), Color(0.3, 0.2, 0.45, 0.5))
 	else:
 		var rp := 0.7 + sin(t * 4.0) * 0.3
-		draw_rect(Rect2(wp_x, 24, 140, 14), Color(0.08, 0.35 * rp, 0.15 * rp, 0.35))
-		draw_string(font, Vector2(wp_x + 148, 38), "READY", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.3, 1.0, 0.6, rp))
+		draw_rect(Rect2(bar_x, bar_y, bar_w_total, bar_h), Color(0.03, 0.2 * rp, 0.1 * rp, 0.4))
+		# Highlight stripe
+		draw_rect(Rect2(bar_x, bar_y, bar_w_total, 3), Color(0.0, 0.5, 0.3, rp * 0.15))
 
-	# Storm / boss status line
+	# Status text — tech font, big
+	if wave_charging:
+		var charge_col := Color(0.3 + wave_charge * 0.7, 0.6 + wave_charge * 0.3, 1.0, 0.95)
+		draw_string(tf, Vector2(wp_x + 160, 46), "CHG", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, charge_col)
+	elif wave_cooldown > 0:
+		draw_string(tf, Vector2(wp_x, 72), "WAIT", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(0.4, 0.3, 0.55, 0.55))
+	else:
+		var rp := 0.7 + sin(t * 4.0) * 0.3
+		draw_string(tf, Vector2(wp_x, 72), "READY", HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color(0.15, 1.0, 0.5, rp))
+
+	# Storm / boss status — pixel font, flashing
 	if boss_state == BossState.FIGHTING or boss_state == BossState.ENTERING:
 		var bp2 := 0.5 + sin(t * 4.0) * 0.5
-		draw_string(font, Vector2(wp_x, 58), "!! BOSS !!", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.8, 0.3, 0.1, bp2))
+		draw_string(pf, Vector2(wp_x + 100, 72), "!! BOSS !!", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.9, 0.25, 0.05, bp2))
 	elif meteor_storm:
 		var wp2 := 0.5 + sin(t * 6.0) * 0.5
-		draw_string(font, Vector2(wp_x, 58), "!! STORM !!", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.2, 0.1, wp2))
+		draw_string(pf, Vector2(wp_x + 100, 72), "!! STORM !!", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.15, 0.05, wp2))
 
 # ─── Audio: FM Synth Melody ───
 
