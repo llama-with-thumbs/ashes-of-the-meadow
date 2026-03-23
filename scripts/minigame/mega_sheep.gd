@@ -155,6 +155,12 @@ var trail_timer: float = 0.0
 var shooting_stars: Array = []
 var shooting_star_timer: float = 0.0
 
+# ─── Scrolling Background ───
+
+var bg_slices: Array[Texture2D] = []
+var bg_scroll_x: float = 0.0
+const BG_SCROLL_SPEED: float = 30.0  # pixels per second
+
 # ─── Parallax Stars ───
 
 var star_layers: Array = []
@@ -338,6 +344,11 @@ func _ready() -> void:
 	boss_sprite_tex = ImageTexture.create_from_image(boss_img)
 	boss_barb_tex = RetroSprites.generate_barbed_wire()
 	boss_tv_tex = RetroSprites.generate_tv_set()
+
+	# Load scrolling background slices
+	for i in 2:
+		var slice_tex: Texture2D = load("res://assets/sprites/bg_slice_%d.png" % i)
+		bg_slices.append(slice_tex)
 
 	_build_stars()
 	_build_hud()
@@ -730,6 +741,14 @@ func _process(delta: float) -> void:
 			if star.pos.x < -2:
 				star.pos.x += W + 4
 				star.pos.y = randf() * H
+
+	# Scroll background
+	var bg_spd: float = BG_SCROLL_SPEED * (speed_mult if state == State.PLAYING else 0.4)
+	bg_scroll_x += bg_spd * game_delta
+	if bg_slices.size() > 0:
+		var total_bg_w: float = bg_slices[0].get_width() * (H / bg_slices[0].get_height()) * bg_slices.size()
+		if bg_scroll_x >= total_bg_w:
+			bg_scroll_x -= total_bg_w
 
 	_update_shooting_stars(game_delta)
 
@@ -2036,14 +2055,23 @@ func _draw() -> void:
 			cos(shake_time * 1.3) * shake_intensity * 0.5 + cos(shake_time * 3.1) * shake_intensity * 0.5
 		)
 
-	# Background (with subtle beat-reactive pulse)
-	var bg_r := 0.01 + beat_pulse * 0.02
-	var bg_g := 0.01 + beat_pulse * 0.01
-	var bg_b := 0.04 + beat_pulse * 0.03
-	draw_rect(Rect2(0, 0, W, H), Color(bg_r, bg_g, bg_b))
-	for i in range(0, 80):
-		var a := 0.015 * (1.0 - float(i) / 80.0)
-		draw_rect(Rect2(0, H - 80 + i, W, 1), Color(0.08, 0.04, 0.15, a))
+	# Background — scrolling cosmic slices
+	draw_rect(Rect2(0, 0, W, H), Color(0.01, 0.01, 0.04))
+	if bg_slices.size() > 0:
+		var slice_h: float = float(bg_slices[0].get_height())
+		var bg_scale: float = H / slice_h
+		var slice_draw_w: float = ceil(bg_slices[0].get_width() * bg_scale)
+		var total_bg_w: float = slice_draw_w * bg_slices.size()
+		var offset_x: float = -fmod(bg_scroll_x, total_bg_w)
+		var bg_tint := Color(1, 1, 1, 0.35)
+		for pass_i in 2:  # Two passes for seamless wrapping
+			var x_start: float = offset_x + pass_i * total_bg_w
+			for i in bg_slices.size():
+				var sx: float = x_start + i * slice_draw_w
+				if sx + slice_draw_w + 2 < 0 or sx > W:
+					continue
+				# Overlap by 2px to eliminate seams
+				draw_texture_rect(bg_slices[i], Rect2(sx - 1, 0, slice_draw_w + 2, H), false, bg_tint)
 
 	# Sunset gradient overlay (The Little Prince loved sunsets)
 	if sunset_active and sunset_progress > 0:
